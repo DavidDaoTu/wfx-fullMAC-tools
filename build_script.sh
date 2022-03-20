@@ -40,7 +40,7 @@ then
 fi
 mkdir out_ethernet_bridge
 
-slc generate $AGENT_WORKSPACE/wfx-fullMAC-tools/ethernet_bridge/ethernet_bridge.slcp -np -d out_ethernet_bridge/ -o makefile --with brd4321a_a06
+slc generate $AGENT_WORKSPACE/ethernet_bridge/ethernet_bridge.slcp -np -d out_ethernet_bridge/ -o makefile --with brd4321a_a06
 
 # cd ./out_ethernet_bridge
 make -j12 -f ./out_ethernet_bridge/ethernet_bridge.Makefile clean all
