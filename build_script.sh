@@ -2,7 +2,7 @@
 
 export PATH=$PATH:$AGENT_WORKSPACE/slc_cli
 
-echo "env = $env"
+echo "PROJECTS_NAME = $PROJECTS_NAME"
 echo "PATH = $PATH"
 echo "In build script AGENT_WORKSPACE = $AGENT_WORKSPACE"
 

@@ -2,6 +2,7 @@ pipeline {
     
     environment {
         AGENT_WORKSPACE = '/home/root'
+        PROJECTS_NAME = 'ethernet_bridge:secured_mqtt:wifi_cli_micriumos'
     }
 
     // agent {
@@ -29,10 +30,10 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts '**/build/debug/*.hex'
-            mail to: 'empiretu@gmail.com',
-                subject: "Pipeline Result: ${currentBuild.fullDisplayName}",
-                body:   "Click this link for more detail ${env.BUILD_URL}"
+            archiveArtifacts artifacts: '**/build/debug/*.hex',
+                                allowEmptyArchive: false,
+                                fingerprint: true,
+                                onlyIfSuccessful: true
         }
     }
 }
