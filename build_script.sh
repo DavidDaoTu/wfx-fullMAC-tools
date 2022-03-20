@@ -6,14 +6,11 @@ echo "env = $env"
 echo "PATH = $PATH"
 echo "In build script AGENT_WORKSPACE = $AGENT_WORKSPACE"
 
-echo "Running slc test witn $AGENT_WORKSPACE"
-slc --help
-
 # Clone/Pull GSDK from github
 if [ -d gecko_sdk ]
 then
-    echo "Going to $AGENT_WORKSPACE/gecko_sdk & git pull"
-    cd $AGENT_WORKSPACE/gecko_sdk
+    echo "Going to ./gecko_sdk & git pull"
+    cd ./gecko_sdk
     git pull origin
     git submodule update --remote
     cd ../
@@ -40,7 +37,7 @@ then
 fi
 mkdir out_ethernet_bridge
 
-slc generate $AGENT_WORKSPACE/ethernet_bridge/ethernet_bridge.slcp -np -d out_ethernet_bridge/ -o makefile --with brd4321a_a06
+slc generate ./ethernet_bridge/ethernet_bridge.slcp -np -d out_ethernet_bridge/ -o makefile --with brd4321a_a06
 
 # cd ./out_ethernet_bridge
 make -j12 -f ./out_ethernet_bridge/ethernet_bridge.Makefile clean all
