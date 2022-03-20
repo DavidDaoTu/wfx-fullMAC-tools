@@ -11,12 +11,13 @@ if [ -d gecko_sdk ]
 then
     echo "Going to ./gecko_sdk & git pull"
     cd ./gecko_sdk
-    git pull origin
-    git submodule update --remote
+    git pull
+    git log    
     cd ../
 else
     echo "git clone by https"
     git clone https://github.com/SiliconLabs/gecko_sdk.git
+    git log
 fi
 
 echo "Running ls -la"
