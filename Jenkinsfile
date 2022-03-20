@@ -17,7 +17,7 @@ pipeline {
                 docker {
                     image 'davidfullstack/build_env_agent:ver0.3-openjdk11-gnu10.3'
                     args '-u 0:0'
-                    reuseNode true
+                    //reuseNode true
                 }
             }
 
