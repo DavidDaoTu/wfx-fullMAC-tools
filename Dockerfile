@@ -27,12 +27,6 @@ RUN mkdir ./gnu_arm
 RUN tar xf gcc-arm-none-eabi-${ARM_TOOLCHAIN_VERSION}-x86_64-linux.tar.bz2 --strip-components=1 -C ./gnu_arm
 RUN rm -rf gcc-arm-none-eabi-${ARM_TOOLCHAIN_VERSION}-x86_64-linux.tar.bz2
 
-# Copy local project source files to docker image
-# ADD $PROJECT_NAME $PROJECT_NAME/
-
-# Copy build script ---> TODO
-# ADD build_script.sh $WORKDIR
-# RUN chmod 777 ./build_script.sh
 
 
 
