@@ -72,8 +72,10 @@ do
     # Building the projects
     echo "Going out_$project & building"
     cd ./out_$project
+    echo "=====================> BEGIN <======================="
     make -j12 -f $project.Makefile clean all
     cd ../
+    echo "=====================> FINISHED <======================="
     echo "Going back & ls -la.."
     echo "PWD = $PWD"
     ls -la
