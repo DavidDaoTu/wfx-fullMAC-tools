@@ -2,9 +2,10 @@
 
 export PATH=$PATH:$AGENT_WORKSPACE/slc_cli
 
+echo "BUILD_VERSION = $BUILD_VERSION"
 echo "PROJECTS_NAME = $PROJECTS_NAME"
 echo "PATH = $PATH"
-echo "In build script AGENT_WORKSPACE = $AGENT_WORKSPACE"
+echo "AGENT_WORKSPACE = $AGENT_WORKSPACE"
 echo "make --version"
 make --version
 

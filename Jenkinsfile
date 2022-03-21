@@ -1,13 +1,8 @@
 pipeline {
-    
     environment {
         AGENT_WORKSPACE = '/home/root'
         PROJECTS_NAME = 'secured_mqtt:wifi_cli_micriumos:ethernet_bridge'
     }
-
-    // agent {
-    //     dockerfile true
-    // }
 
     agent any
 
@@ -15,9 +10,9 @@ pipeline {
         stage('Build') {
 
             agent {
-                docker {
-                    image 'davidfullstack/build_env_agent:ver0.3-openjdk11-gnu10.3'
+                dockerfile {
                     args '-u 0:0'
+                    additionalBuildArgs '--build-arg BUILD_VERSION=1.0.2'
                     reuseNode true
                 }
             }
