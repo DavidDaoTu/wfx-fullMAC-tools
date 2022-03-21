@@ -4,7 +4,7 @@ description: >
   This example project provides a Command Line Interface (CLI) to interact with the Wi-Fi FMAC driver and the LwIP APIs.
 category: Example|Platform
 package: platform
-quality: evaluation
+quality: sample
 component:
   - id: simple_button
     instance: [btn0, btn1]

@@ -4,7 +4,7 @@ description: >
   This example project demonstrates how to run a secured MQTT application with the Wi-Fi FMAC driver, the LwIP functionalities and the MbedTLS library.
 category: Example|Platform
 package: platform
-quality: evaluation
+quality: sample
 component:
   - id: mbedtls_sha1
   - id: micriumos_bsp

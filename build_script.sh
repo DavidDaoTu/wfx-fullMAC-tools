@@ -5,6 +5,8 @@ export PATH=$PATH:$AGENT_WORKSPACE/slc_cli
 echo "PROJECTS_NAME = $PROJECTS_NAME"
 echo "PATH = $PATH"
 echo "In build script AGENT_WORKSPACE = $AGENT_WORKSPACE"
+echo "make --version"
+make --version
 
 ##### Clone/pull the latest GSDK from github #####
 if [ -d gecko_sdk ]
@@ -64,12 +66,17 @@ do
     mkdir out_$project
 
     # Generating the projects
+    echo "Generating out_$project"
     slc generate ./$project/$project.slcp -np -d out_$project/ -o makefile --with brd4321a_a06
 
     # Building the projects
+    echo "Going out_$project & building"
     cd ./out_$project
     make -j12 -f $project.Makefile clean all
     cd ../
+    echo "Going back & ls -la.."
+    echo "PWD = $PWD"
+    ls -la
 done
 
 # commander flash build/debug/ethernet_bridge.hex

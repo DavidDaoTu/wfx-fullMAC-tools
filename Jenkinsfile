@@ -2,7 +2,7 @@ pipeline {
     
     environment {
         AGENT_WORKSPACE = '/home/root'
-        PROJECTS_NAME = 'ethernet_bridge:secured_mqtt:wifi_cli_micriumos'
+        PROJECTS_NAME = 'secured_mqtt:wifi_cli_micriumos:ethernet_bridge'
     }
 
     // agent {
