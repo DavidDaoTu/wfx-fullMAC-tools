@@ -2,6 +2,7 @@ pipeline {
     environment {
         AGENT_WORKSPACE = '/home/root'
         PROJECTS_NAME = 'secured_mqtt:wifi_cli_micriumos:ethernet_bridge'
+        SLAVE_LABEL = 'tudao-pc-ubuntu'
     }
 
     agent any
@@ -10,6 +11,9 @@ pipeline {
         stage('Build') {
 
             agent {
+                node {
+                    label $SLAVE_LABEL
+                }
                 dockerfile {
                     args '-u 0:0'
                     additionalBuildArgs '--build-arg BUILD_VERSION=1.0.2'

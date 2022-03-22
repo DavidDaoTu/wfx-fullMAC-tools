@@ -59,7 +59,7 @@ do
     echo $project
     if [ -d out_$project ] 
     then
-        echo "Removing out_$project"
+        echo "Removing the previous out_$project"
         rm -rf out_$project
     fi
 
@@ -67,7 +67,7 @@ do
     mkdir out_$project
 
     # Generating the projects
-    echo "Generating out_$project"
+    echo "Generating a new out_$project"
     slc generate ./$project/$project.slcp -np -d out_$project/ -o makefile --with brd4321a_a06
 
     # Building the projects
