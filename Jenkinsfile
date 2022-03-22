@@ -5,15 +5,16 @@ pipeline {
         SLAVE_LABEL = 'tudao-pc-ubuntu'
     }
 
-    agent any
+    agent {
+        node {
+            label $SLAVE_LABEL
+        }
+    }
 
     stages {
         stage('Build') {
 
             agent {
-                node {
-                    label $SLAVE_LABEL
-                }
                 dockerfile {
                     args '-u 0:0'
                     additionalBuildArgs '--build-arg BUILD_VERSION=1.0.2'
