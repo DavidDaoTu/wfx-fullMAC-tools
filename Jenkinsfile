@@ -7,8 +7,7 @@ pipeline {
 
     agent {
         node {
-            //label 'tudao-pc-ubuntu'
-            label "$SLAVE_LABEL"
+            label 'tudao-pc-ubuntu'            
         }
     }
 
