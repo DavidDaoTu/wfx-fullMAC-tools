@@ -14,12 +14,12 @@ if [ -d gecko_sdk ]
 then
     echo "Going to ./gecko_sdk & git pull"
     cd ./gecko_sdk
-    git pull
+    git lfs pull origin
     git log    
     cd ../
 else
     echo "git clone by https"
-    git clone https://github.com/SiliconLabs/gecko_sdk.git
+    git lfs clone https://github.com/SiliconLabs/gecko_sdk.git
     git log
 fi
 
@@ -33,20 +33,6 @@ echo "PWD = $PWD"
 slc signature trust --sdk ./gecko_sdk/
 slc configuration --sdk ./gecko_sdk/
 slc configuration --gcc-toolchain $AGENT_WORKSPACE/gnu_arm
-
-##### Clear & create the output folders #####
-# if [ -d out_ethernet_bridge ] 
-# then
-#     echo "Removing out_ethernet_bridge"
-#     rm -rf out_ethernet_bridge
-# fi
-# mkdir out_ethernet_bridge
-# # Generating the projects
-# slc generate ./ethernet_bridge/ethernet_bridge.slcp -np -d out_ethernet_bridge/ -o makefile --with brd4321a_a06
-
-# # Building the projects
-# cd ./out_ethernet_bridge
-# make -j12 -f ethernet_bridge.Makefile clean all
 
 ##### Substitue seperators by the white spaces & convert to an array #####
 SEPERATOR=":"
@@ -76,10 +62,7 @@ do
     echo "===================> Begin <===================="
     make -j12 -f $project.Makefile clean all
     echo "===================> Finished <=================="
-    cd ../
-    echo "Going back & ls -la.."
-    echo "PWD = $PWD"
-    ls -la
+    cd ../    
 done
 
 # commander flash build/debug/ethernet_bridge.hex
