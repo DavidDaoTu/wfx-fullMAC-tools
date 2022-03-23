@@ -10,6 +10,11 @@ RUN apt-get update
 RUN apt-get install unzip
 RUN apt-get install python3 -y && apt-get install python3-pip -y 
 
+# Install Git LFS for fully downloading GSDK
+RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+RUN apt-get install git-lfs
+RUN git-lfs install
+
 # Download slc_cli tool
 RUN wget https://www.silabs.com/documents/login/software/slc_cli_linux.zip
 
