@@ -8,6 +8,8 @@ echo "PATH = $PATH"
 echo "AGENT_WORKSPACE = $AGENT_WORKSPACE"
 echo "make --version"
 make --version
+echo "git --version"
+git --version
 
 ##### Clone/pull the latest GSDK from github #####
 if [ -d gecko_sdk ]
