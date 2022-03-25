@@ -7,6 +7,9 @@ echo "PROJECTS_NAME = $PROJECTS_NAME"
 echo "PATH = $PATH"
 echo "AGENT_WORKSPACE = $AGENT_WORKSPACE"
 echo "BOARD_ID = $BOARD_ID"
+echo "GIT_BRANCH = $GIT_BRANCH"
+echo "GIT_REVISION = $GIT_REVISION"
+
 echo "make --version"
 make --version
 echo "git --version"
@@ -38,7 +41,7 @@ cd ../
 
 ##### CLEAN & CREATE OUTPUT FOLDER CONTAINING BINARY HEX FILE #####
 rm -rf BIN_*
-OUT_FOLDER=BIN_${GSDK_BRANCH}_${GSDK_TAG}_${PROJECT_BRANCH}_${COMMIT_ID}
+OUT_FOLDER=BIN_${PROJECT_BRANCH}_${COMMIT_ID}_${GSDK_BRANCH}_${GSDK_TAG}
 mkdir $OUT_FOLDER
 
 ##### For testing #####
@@ -86,6 +89,7 @@ do
     cd ../    
 done
 
+##### Packaging the binary output files #####
 tar cvf $OUT_FOLDER.zip $OUT_FOLDER/*
 
 # commander flash build/debug/ethernet_bridge.hex
