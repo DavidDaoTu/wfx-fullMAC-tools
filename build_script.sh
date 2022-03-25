@@ -82,7 +82,7 @@ do
     cd ./out_$project
     echo "===================> Begin <===================="
     make -j12 -f $project.Makefile clean all
-    if [ $? eq 0 ];then
+    if [ $? -eq 0 ];then
         cp build/debug/*.hex ../$OUT_FOLDER
     fi    
     echo "===================> Finished <=================="
