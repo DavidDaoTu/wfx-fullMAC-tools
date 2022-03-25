@@ -18,7 +18,7 @@ git --version
 
 ##### Get git branch & commit ID #####
 PROJECT_BRANCH=${GIT_BRANCH//'/'/'_'}
-COMMIT_ID=${GIT_COMMIT}
+COMMIT_ID=${GIT_COMMIT:0:8}
 
 ##### Clone/pull the latest GSDK from github #####
 if [ ! -d gecko_sdk ]

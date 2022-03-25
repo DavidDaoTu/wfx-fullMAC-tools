@@ -1,5 +1,5 @@
 // Variables
-def SLAVE_LABEL = "tudao-pc-ubuntu"
+// def SLAVE_LABEL = "tudao-pc-ubuntu"
 
 pipeline {
     environment {
