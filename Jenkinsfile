@@ -4,7 +4,7 @@ def SLAVE_LABEL = "tudao-pc-ubuntu"
 pipeline {
     environment {
         AGENT_WORKSPACE = '/home/root'
-        PROJECTS_NAME = 'secured_mqtt:wifi_cli_icriumos:ethernet_bridge'
+        PROJECTS_NAME = 'secured_mqtt:wifi_cli_micriumos:ethernet_bridge'
         BOARD_ID = 'brd4321a_a06'
     }
 
