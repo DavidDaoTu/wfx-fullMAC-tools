@@ -36,12 +36,9 @@ GSDK_BRANCH=`git rev-parse --abbrev-ref HEAD`
 GSDK_TAG=`git describe --tag`
 cd ../
 
-##### CREATE OUTPUT FOLDER CONTAINING BINARY HEX FILE #####
+##### CLEAN & CREATE OUTPUT FOLDER CONTAINING BINARY HEX FILE #####
+rm -rf BIN_*
 OUT_FOLDER=BIN_${GSDK_BRANCH}_${GSDK_TAG}_${PROJEC_BRANCH}_${COMMIT_ID}
-if [ -d $OUT_FOLDER ]
-then
-    rm -rf $OUT_FOLDER
-fi
 mkdir $OUT_FOLDER
 
 ##### For testing #####
