@@ -2,17 +2,13 @@
 
 export PATH=$PATH:$AGENT_WORKSPACE/slc_cli
 
-echo "BUILD_VERSION = $BUILD_VERSION"
 echo "PROJECTS_NAME = $PROJECTS_NAME"
 echo "PATH = $PATH"
 echo "AGENT_WORKSPACE = $AGENT_WORKSPACE"
 echo "BOARD_ID = $BOARD_ID"
 echo "GIT_BRANCH = $GIT_BRANCH"
 echo "GIT_COMMIT = $GIT_COMMIT"
-echo "GIT_AUTHOR_EMAIL = $GIT_AUTHOR_EMAIL"
-echo "GIT_AUTHOR_NAME = $GIT_AUTHOR_NAME"
-echo "GIT_COMMITTER_EMAIL = $GIT_COMMITTER_EMAIL"
-echo "GIT_COMMITTER_NAME = $GIT_COMMITTER_NAME"
+
 
 
 echo "make --version"
@@ -21,9 +17,8 @@ echo "git --version"
 git --version
 
 ##### Get git branch & commit ID #####
-BRANCH=`git rev-parse --abbrev-ref HEAD`
-PROJECT_BRANCH=${BRANCH//'/'/'_'}
-COMMIT_ID=`git rev-parse HEAD | cut -c -7`
+PROJECT_BRANCH=${GIT_BRANCH//'/'/'_'}
+COMMIT_ID=${GIT_COMMIT}
 
 ##### Clone/pull the latest GSDK from github #####
 if [ ! -d gecko_sdk ]
@@ -87,8 +82,11 @@ do
     cd ./out_$project
     echo "===================> Begin <===================="
     make -j12 -f $project.Makefile clean all
+    
+    # Copy the built binary file to output folder & add md5sum 
     if [ $? -eq 0 ];then
         cp build/debug/*.hex ../$OUT_FOLDER
+        md5sum build/debug/*.hex >> ../$OUT_FOLDER/md5sum_check
     fi    
     echo "===================> Finished <=================="
     cd ../    
