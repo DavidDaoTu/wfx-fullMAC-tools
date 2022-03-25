@@ -14,7 +14,7 @@ git --version
 
 ##### Get git branch & commit ID #####
 BRANCH=`git rev-parse --abbrev-ref HEAD`
-PROJEC_BRANCH=${BRANCH//'/'/'_'}
+PROJECT_BRANCH=${BRANCH//'/'/'_'}
 COMMIT_ID=`git rev-parse HEAD | cut -c -7`
 
 ##### Clone/pull the latest GSDK from github #####
