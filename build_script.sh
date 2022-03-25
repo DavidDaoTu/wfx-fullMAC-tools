@@ -6,24 +6,43 @@ echo "BUILD_VERSION = $BUILD_VERSION"
 echo "PROJECTS_NAME = $PROJECTS_NAME"
 echo "PATH = $PATH"
 echo "AGENT_WORKSPACE = $AGENT_WORKSPACE"
+echo "BOARD_ID = $BOARD_ID"
 echo "make --version"
 make --version
 echo "git --version"
 git --version
 
+##### Get git branch & commit ID #####
+BRANCH=`git rev-parse --abbrev-ref HEAD`
+PROJEC_BRANCH=${BRANCH//'/'/'_'}
+COMMIT_ID=`git rev-parse HEAD | cut -c -7`
+
 ##### Clone/pull the latest GSDK from github #####
-if [ -d gecko_sdk ]
+if [ ! -d gecko_sdk ]
 then
-    echo "Going to ./gecko_sdk & git pull"
-    cd ./gecko_sdk
-    git lfs pull origin
-    git log    
-    cd ../
-else
-    echo "git clone by https"
+    echo "Cloning GSDK..."
     git lfs clone https://github.com/SiliconLabs/gecko_sdk.git
-    git log
+    if [ $? -ne 0]
+    then 
+        echo "Failed to clone GSDK! Exiting..."
+        exit 1
+    fi
 fi
+echo "Going to ./gecko_sdk & git pull"
+cd ./gecko_sdk
+git lfs pull origin
+git log -n3
+GSDK_BRANCH=`git rev-parse --abbrev-ref HEAD`
+GSDK_TAG=`git describe --tag`
+cd ../
+
+##### CREATE OUTPUT FOLDER CONTAINING BINARY HEX FILE #####
+OUT_FOLDER=BIN_${GSDK_BRANCH}_${GSDK_TAG}_${PROJEC_BRANCH}_${COMMIT_ID}
+if [ -d $OUT_FOLDER ]
+then
+    rm -rf $OUT_FOLDER
+fi
+mkdir $OUT_FOLDER
 
 ##### For testing #####
 echo "Running ls -la"
@@ -56,15 +75,20 @@ do
 
     # Generating the projects
     echo "Generating a new out_$project"
-    slc generate ./$project/$project.slcp -np -d out_$project/ -o makefile --with brd4321a_a06
+    slc generate ./$project/$project.slcp -np -d out_$project/ -o makefile --with $BOARD_ID
 
     # Building the projects
     echo "Going out_$project & building"
     cd ./out_$project
     echo "===================> Begin <===================="
     make -j12 -f $project.Makefile clean all
+    if [ $? eq 0 ];then
+        cp build/debug/*.hex ../$OUT_FOLDER
+    fi    
     echo "===================> Finished <=================="
     cd ../    
 done
+
+tar cvf $OUT_FOLDER.zip $OUT_FOLDER/*
 
 # commander flash build/debug/ethernet_bridge.hex
