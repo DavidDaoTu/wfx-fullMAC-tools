@@ -1,13 +1,15 @@
+// Variables
+def SLAVE_LABEL = "tudao-pc-ubuntu"
+
 pipeline {
     environment {
         AGENT_WORKSPACE = '/home/root'
         PROJECTS_NAME = 'secured_mqtt:wifi_cli_micriumos:ethernet_bridge'
-        SLAVE_LABEL = 'tudao-pc-ubuntu'
     }
 
     agent {
         node {
-            label 'tudao-pc-ubuntu'
+            label "${SLAVE_LABEL}"
         }
     }
 
