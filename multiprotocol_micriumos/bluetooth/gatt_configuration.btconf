@@ -76,7 +76,7 @@
   </service>
   
   <!--Silabs MP Light-->
-  <service advertise="false" name="Silabs MP Light" requirement="mandatory" sourceId="" type="primary" uuid="63f596e4-b583-4078-bfc3-b04225378713">
+  <service advertise="true" name="Silabs MP Light" requirement="mandatory" sourceId="" type="primary" uuid="63f596e4-b583-4078-bfc3-b04225378713">
     <informativeText/>
     
     <!--Light-->

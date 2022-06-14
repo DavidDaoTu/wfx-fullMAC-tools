@@ -33,6 +33,8 @@
 #include "gatt_db.h"
 #include "app.h"
 
+#include "app_bluetooth.h"
+#include "interface.h"
 // The advertising set handle allocated from Bluetooth stack.
 static uint8_t advertising_set_handle = 0xff;
 
@@ -137,7 +139,100 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
     ///////////////////////////////////////////////////////////////////////////
     // Add additional event handlers here as your application requires!      //
     ///////////////////////////////////////////////////////////////////////////
+    /* This event indicates that a remote GATT client is attempting to write a value of an
+    * attribute in to the local GATT database, where the attribute was defined in the GATT
+    * XML firmware configuration file to have type="user".  */
+    case sl_bt_evt_gatt_server_user_write_request_id:
+    {
+      printf("\r\n Inside user_write_request\r\n");
+      switch (evt->data.evt_gatt_server_user_write_request.characteristic) {
+        case LIGHT_STATE_GATTDB:
+        {
+  //            BleConn_t *connPoi = bleConnGet(evt->data.evt_gatt_server_user_write_request.connection);
+  //            if (connPoi != NULL) {
+  //              interface_light_set_state(interface_light_trigger_src_bluetooth,
+  //                                        &connPoi->address,
+  //                                        evt->data.evt_gatt_server_user_write_request.value.data[0]);
+            
+          interface_light_set_state(interface_light_trigger_src_bluetooth,
+                                    &evt->data.evt_connection_opened.address,
+                                    evt->data.evt_gatt_server_user_write_request.value.data[0]);
+            
+            /* Send response to write request */
+            sl_bt_gatt_server_send_user_write_response(evt->data.evt_gatt_server_user_write_request.connection,
+                                                        LIGHT_STATE_GATTDB,
+                                                        0);
+          }
+          break;
+        }
+      
+      break;
+    }
+      
+    /* This event indicates that a remote GATT client is attempting to read a value of an
+      *  attribute from the local GATT database, where the attribute was defined in the GATT
+      *  XML firmware configuration file to have type="user". */
+    case sl_bt_evt_gatt_server_user_read_request_id:
+    {   
+    
+      uint16_t sent_len = 0;
+      switch (evt->data.evt_gatt_server_user_read_request.characteristic) 
+      {
 
+        /* Light state read */
+        case LIGHT_STATE_GATTDB:
+        {
+          uint8_t light_state = interface_light_get_state();
+          
+
+          /* Send response to read request */
+          sl_bt_gatt_server_send_user_read_response(evt->data.evt_gatt_server_user_read_request.connection,
+                                                    LIGHT_STATE_GATTDB,
+                                                    0,
+                                                    sizeof(light_state),
+                                                    (uint8_t*)&light_state,
+                                                    &sent_len);
+          break;
+        }
+
+        /* Trigger source read */
+        case TRIGGER_SOURCE_GATTDB:
+        {
+          uint8_t trigger = (uint8_t)interface_light_get_trigger();
+
+          /* Send response to read request */
+          sl_bt_gatt_server_send_user_read_response(evt->data.evt_gatt_server_user_read_request.connection,
+                                                        TRIGGER_SOURCE_GATTDB,
+                                                        0,
+                                                        sizeof(trigger),
+                                                        &trigger,
+                                                        &sent_len);
+          break;
+        }
+
+        /* Source address read */
+        case SOURCE_ADDRESS_GATTDB:
+        {
+          uint8_t addr[8] = {0};
+          interface_mac_t mac;
+
+          // Retrieve the MAC address of the source which last triggered the light
+          interface_light_get_mac_trigger(&mac);
+          memcpy(addr, (uint8_t *)&mac, sizeof(mac));
+
+          /* Send response to read request */
+          sl_bt_gatt_server_send_user_read_response(evt->data.evt_gatt_server_user_read_request.connection,
+                                                        SOURCE_ADDRESS_GATTDB,
+                                                        0,
+                                                        sizeof(addr),
+                                                        addr,
+                                                        &sent_len);
+          break;
+        }
+      }
+      break;
+    }
+      
     // -------------------------------
     // Default event handler.
     default:

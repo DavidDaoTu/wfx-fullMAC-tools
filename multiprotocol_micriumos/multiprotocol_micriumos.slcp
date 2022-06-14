@@ -50,6 +50,7 @@ component:
 source:
   - path: main.c
   - path: app.c
+  - path: interface.c
   - path: bluetooth/app_bluetooth.c
     folder: bluetooth
   - path: wifi/app_wifi_events.c
@@ -68,6 +69,7 @@ include:
   - path: .
     file_list:
       - path: app.h    
+      - path: interface.h
   - path: bluetooth
     file_list:
       - path: app_bluetooth.h  
