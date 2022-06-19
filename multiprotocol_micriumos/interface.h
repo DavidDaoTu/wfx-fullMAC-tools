@@ -23,5 +23,11 @@ void interface_light_set_state(interface_light_trigger_src_t trigger,
                                interface_mac_t *mac,
                                uint8_t new_led_state);
 uint8_t interface_light_get_state(void);
+void interface_light_get_mac_trigger (interface_mac_t *mac);
+interface_light_trigger_src_t interface_light_get_trigger (void);
 
+void interface_display_ble_state(bool connected);
+void interface_display_wifi_state(bool connected);
+void interface_display_ble_id(uint8_t *id);
+void interface_display_wifi_id(uint8_t *id);
 #endif /* INTERFACE_H_ */

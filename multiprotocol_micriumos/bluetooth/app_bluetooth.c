@@ -34,9 +34,204 @@
 #include "app.h"
 
 #include "app_bluetooth.h"
-#include "interface.h"
+
+static sl_bt_gatt_client_config_flag_t light_state_gatt_flag = sl_bt_gatt_disable;
+static sl_bt_gatt_client_config_flag_t trigger_source_gatt_flag = sl_bt_gatt_disable;
+static sl_bt_gatt_client_config_flag_t source_address_gatt_flag = sl_bt_gatt_disable;
+
+static bool ble_indication_pending = false;
+static bool ble_indication_ongoing = false;
+
+static uint8_t ble_nb_connected = 0;
+static uint8_t ble_state = 0;
+
+static BleConn_t ble_conn[SL_BT_CONFIG_MAX_CONNECTIONS];
+static bd_addr ble_own_addr = {0};
+
+// Timer for periodic indication
+static sl_simple_timer_t app_bt_timers[2]; // period & timeout timer handles
+
+
+static BleTimer_t g_timer_types[2] = {bleTimerIndicatePeriod, bleTimerIndicateTimeout};
+
+static void app_single_timer_cb(sl_simple_timer_t *handle, void *data);
+
+
+// return false on error
+static bool bleConnAdd(uint8_t handle, bd_addr* address)
+{
+  for (uint8_t i = 0; i < SL_BT_CONFIG_MAX_CONNECTIONS; i++) {
+    if (ble_conn[i].inUse == false) {
+      ble_conn[i].handle = handle;
+      memcpy((void*)&ble_conn[i].address, (void*)address, sizeof(ble_conn[i].address));
+      ble_conn[i].inUse = true;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool bleConnRemove(uint8_t handle)
+{
+  for (uint8_t i = 0; i < SL_BT_CONFIG_MAX_CONNECTIONS; i++) {
+    if (ble_conn[i].handle == handle) {
+      ble_conn[i].handle = 0;
+      memset((void*)&ble_conn[i].address.addr, 0, sizeof(ble_conn[i].address.addr));
+      ble_conn[i].inUse = false;
+      return true;
+    }
+  }
+  return false;
+}
+
+static BleConn_t* bleConnGet(uint8_t handle)
+{
+  for (uint8_t i = 0; i < SL_BT_CONFIG_MAX_CONNECTIONS; i++) {
+    if (ble_conn[i].handle == handle) {
+      return &ble_conn[i];
+    }
+  }
+  return NULL;
+}
+
+void bluetooth_app_request_send_indication (void)
+{
+  if (ble_nb_connected > 0) {
+    ble_indication_pending = true;
+  }
+}
+
+
+static int bluetooth_app_send_indication(uint16_t ble_characteristic)
+{
+  int res = -1;
+
+  switch (ble_characteristic) {
+
+    case LIGHT_STATE_GATTDB:
+    {
+      // stop light indication confirmation timer
+      sl_simple_timer_stop(&app_bt_timers[bleTimerIndicateTimeout]);
+
+      if (light_state_gatt_flag == sl_bt_gatt_indication) {
+        uint8_t light_state = interface_light_get_state();
+
+        // start timer for light indication confirmation
+        sl_simple_timer_start(&app_bt_timers[bleTimerIndicateTimeout],
+                              INDICATION_TIMER_TIMEOUT_MSEC,
+                              app_single_timer_cb,
+                              &g_timer_types[bleTimerIndicateTimeout],
+                              false);
+
+        /* Send notification/indication data */
+        sl_bt_gatt_server_send_indication(ble_conn[0].handle,
+                                           LIGHT_STATE_GATTDB,
+                                           sizeof(light_state),
+                                           (uint8_t*)&light_state);
+        res = 0;
+      }
+      break;
+    }
+
+    case TRIGGER_SOURCE_GATTDB:
+    {
+      // stop light indication confirmation timer
+      sl_simple_timer_stop(&app_bt_timers[bleTimerIndicateTimeout]);
+      if (trigger_source_gatt_flag == sl_bt_gatt_indication) {
+        uint8_t trigger = (uint8_t)interface_light_get_trigger();
+
+        // start timer for trigger source indication confirmation
+        sl_simple_timer_start(&app_bt_timers[bleTimerIndicateTimeout],
+                              INDICATION_TIMER_TIMEOUT_MSEC,
+                              app_single_timer_cb,
+                              &g_timer_types[bleTimerIndicateTimeout],
+                              false);
+
+        /* Send notification/indication data */
+        sl_bt_gatt_server_send_indication(ble_conn[0].handle,
+                                         TRIGGER_SOURCE_GATTDB,
+                                         sizeof(trigger),
+                                         &trigger);
+        res = 0;
+      }
+      break;
+    }
+
+    case SOURCE_ADDRESS_GATTDB:
+    {
+      // stop light indication confirmation timer
+      sl_simple_timer_stop(&app_bt_timers[bleTimerIndicateTimeout]);
+      if (source_address_gatt_flag == sl_bt_gatt_indication) {
+        // start timer for source address indication confirmation
+          sl_simple_timer_start(&app_bt_timers[bleTimerIndicateTimeout],
+                                        INDICATION_TIMER_TIMEOUT_MSEC,
+                                        app_single_timer_cb,
+                                        &g_timer_types[bleTimerIndicateTimeout],
+                                        false);
+
+        uint8_t addr[8] = {0};
+        interface_mac_t mac;
+
+        // Retrieve the MAC address of the source which last triggered the light
+        interface_light_get_mac_trigger(&mac);
+        memcpy(addr, (uint8_t *)&mac, sizeof(mac));
+
+        /* Send notification/indication data */
+        sl_bt_gatt_server_send_indication(ble_conn[0].handle,
+                                           SOURCE_ADDRESS_GATTDB,
+                                           sizeof(addr),
+                                           addr);
+        res = 0;
+      }
+      break;
+    }
+  }
+
+  return res;
+}
+
+/**************************************************************************//**
+ * Acquire Light mutex
+ * @param[in] handle timer handle
+ * @param[in] data additional data
+ *****************************************************************************/
+static void app_single_timer_cb(sl_simple_timer_t *handle,
+                                void *data)
+{
+  (void)handle;
+  int res = -1;
+
+  BleTimer_t *p_timer_type = data;
+  int timer_type = (int) *p_timer_type;
+
+  switch (timer_type) {
+
+    /* Indication period reached */
+    case bleTimerIndicatePeriod:      
+      if (!ble_indication_ongoing) {
+        ble_indication_ongoing = true;
+
+        // Start sending BLE indications
+        res = bluetooth_app_send_indication(LIGHT_STATE_GATTDB);
+        if (res != 0) {
+          // Error, no indications are sent as long as the remote GATT doesn't read the characteristics first.
+          ble_indication_ongoing = false;
+        }
+      } else {
+        ble_indication_pending = true;
+      }
+      break;
+
+      /* Indication timeout */
+    case bleTimerIndicateTimeout:
+      ble_indication_ongoing = false;
+      break;
+   }
+}
+
 // The advertising set handle allocated from Bluetooth stack.
 static uint8_t advertising_set_handle = 0xff;
+
 
 /**************************************************************************//**
  * Application Init.
@@ -74,6 +269,15 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
   uint8_t address_type;
   uint8_t system_id[8];
 
+  int res = -1; 
+
+  // Check if an indication is pending
+  if (ble_indication_pending & !ble_indication_ongoing) {
+    ble_indication_pending = false;
+    ble_indication_ongoing = true;
+    bluetooth_app_send_indication(LIGHT_STATE_GATTDB);
+  }
+
   switch (SL_BT_MSG_ID(evt->header)) {
     // -------------------------------
     // This event indicates the device has started and the radio is ready.
@@ -100,6 +304,10 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
                                                    system_id);
       app_assert_status(sc);
 
+      memcpy((void *)&ble_own_addr, (void *)&address, sizeof(ble_own_addr));
+      // Update the LCD display with the BLE Id
+      interface_display_ble_id((uint8_t *)&ble_own_addr.addr);
+
       // Create an advertising set.
       sc = sl_bt_advertiser_create_set(&advertising_set_handle);
       app_assert_status(sc);
@@ -123,11 +331,48 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
     // -------------------------------
     // This event indicates that a new connection was opened.
     case sl_bt_evt_connection_opened_id:
+      ble_nb_connected++;
+      ble_state |= BLE_STATE_CONNECTED;
+
+      bleConnAdd(evt->data.evt_connection_opened.connection,
+                 &evt->data.evt_connection_opened.address);
+
+      printf("BLE: connection opened %d (%02X%02X%02X%02X%02X%02X)\r\n",
+             evt->data.evt_connection_opened.connection,
+             evt->data.evt_connection_opened.address.addr[5],
+             evt->data.evt_connection_opened.address.addr[4],
+             evt->data.evt_connection_opened.address.addr[3],
+             evt->data.evt_connection_opened.address.addr[2],
+             evt->data.evt_connection_opened.address.addr[1],
+             evt->data.evt_connection_opened.address.addr[0]);
+
+      if (ble_nb_connected == 1) {
+          interface_display_ble_state(true);
+          sl_simple_timer_start(&app_bt_timers[bleTimerIndicatePeriod],
+                                INDICATION_TIMER_PERIOD_MSEC,
+                                app_single_timer_cb,
+                                &g_timer_types[bleTimerIndicatePeriod],
+                                true);
+      }
       break;
 
     // -------------------------------
     // This event indicates that a connection was closed.
     case sl_bt_evt_connection_closed_id:
+      ble_nb_connected--;
+      bleConnRemove(evt->data.evt_connection_closed.connection);
+      printf("BLE: connection closed, reason: %#02x\r\n", evt->data.evt_connection_closed.reason);
+
+      if (ble_nb_connected == 0) {
+        ble_state &= ~BLE_STATE_CONNECTED;
+        interface_display_ble_state(false);
+
+        /* No device connected, stop sending indications */
+        sl_simple_timer_stop(&app_bt_timers[bleTimerIndicatePeriod]);
+        sl_simple_timer_stop(&app_bt_timers[bleTimerIndicateTimeout]);
+        ble_indication_ongoing = false;
+        ble_indication_pending = false;
+      }
       // Restart advertising after client has disconnected.
       sc = sl_bt_advertiser_start(
         advertising_set_handle,
@@ -144,19 +389,18 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
     * XML firmware configuration file to have type="user".  */
     case sl_bt_evt_gatt_server_user_write_request_id:
     {
-      printf("\r\n Inside user_write_request\r\n");
+
       switch (evt->data.evt_gatt_server_user_write_request.characteristic) {
-        case LIGHT_STATE_GATTDB:
-        {
-  //            BleConn_t *connPoi = bleConnGet(evt->data.evt_gatt_server_user_write_request.connection);
-  //            if (connPoi != NULL) {
-  //              interface_light_set_state(interface_light_trigger_src_bluetooth,
-  //                                        &connPoi->address,
-  //                                        evt->data.evt_gatt_server_user_write_request.value.data[0]);
+        case LIGHT_STATE_GATTDB: {
+          BleConn_t *connPoi = bleConnGet(evt->data.evt_gatt_server_user_write_request.connection);
+          if (connPoi != NULL) {
+            interface_light_set_state(interface_light_trigger_src_bluetooth,
+                                      &connPoi->address,
+                                      evt->data.evt_gatt_server_user_write_request.value.data[0]);
             
-          interface_light_set_state(interface_light_trigger_src_bluetooth,
-                                    &evt->data.evt_connection_opened.address,
-                                    evt->data.evt_gatt_server_user_write_request.value.data[0]);
+            interface_light_set_state(interface_light_trigger_src_bluetooth,
+                                      &evt->data.evt_connection_opened.address,
+                                      evt->data.evt_gatt_server_user_write_request.value.data[0]);
             
             /* Send response to write request */
             sl_bt_gatt_server_send_user_write_response(evt->data.evt_gatt_server_user_write_request.connection,
@@ -165,6 +409,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
           }
           break;
         }
+      }
       
       break;
     }
@@ -232,8 +477,72 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
       }
       break;
     }
+
+    /* This event indicates either that a local Client Characteristic Configuration descriptor
+     * has been changed by the remote GATT client, or that a confirmation from the remote GATT
+     * client was received upon a successful reception of the indication. */
+    case sl_bt_evt_gatt_server_characteristic_status_id:
+    {
       
-    // -------------------------------
+      switch (evt->data.evt_gatt_server_characteristic_status.characteristic) {
+
+        case LIGHT_STATE_GATTDB:
+        {
+          switch ((sl_bt_gatt_server_characteristic_status_flag_t)evt->data.evt_gatt_server_characteristic_status.status_flags) {
+
+            // confirmation of indication received from remote GATT client
+            case sl_bt_gatt_server_confirmation:
+              // Notification received from the remote GAT, send the next indication
+              bluetooth_app_send_indication(TRIGGER_SOURCE_GATTDB);
+              break;
+
+              // client characteristic configuration changed by remote GATT client
+            case sl_bt_gatt_server_client_config:
+              light_state_gatt_flag = (sl_bt_gatt_client_config_flag_t)evt->data.evt_gatt_server_characteristic_status.client_config_flags;
+              break;
+          }
+          break;
+        }
+
+        case TRIGGER_SOURCE_GATTDB:
+        {
+          switch ((sl_bt_gatt_server_characteristic_status_flag_t)evt->data.evt_gatt_server_characteristic_status.status_flags) {
+
+            // confirmation of indication received from remote GATT client
+            case sl_bt_gatt_server_confirmation:
+              // Notification received from the remote GAT, send the next indication
+              bluetooth_app_send_indication(SOURCE_ADDRESS_GATTDB);
+              break;
+
+              // client characteristic configuration changed by remote GATT client
+            case sl_bt_gatt_server_client_config:
+              trigger_source_gatt_flag = (sl_bt_gatt_client_config_flag_t)evt->data.evt_gatt_server_characteristic_status.client_config_flags;
+              break;
+          }
+          break;
+        }
+
+        case SOURCE_ADDRESS_GATTDB:
+        {
+          switch ((sl_bt_gatt_server_characteristic_status_flag_t)evt->data.evt_gatt_server_characteristic_status.status_flags) {
+            // confirmation of indication received from remote GATT client
+            case sl_bt_gatt_server_confirmation:
+              // All indications sent successfully, stop the timer
+              sl_simple_timer_stop(&app_bt_timers[bleTimerIndicateTimeout]);
+
+              ble_indication_ongoing = false;
+              break;
+
+              // client characteristic configuration changed by remote GATT client
+            case sl_bt_gatt_server_client_config:
+              source_address_gatt_flag = (sl_bt_gatt_client_config_flag_t)evt->data.evt_gatt_server_characteristic_status.client_config_flags;
+              break;
+          }
+          break;
+        }
+      }
+      break;
+    }    
     // Default event handler.
     default:
       break;
