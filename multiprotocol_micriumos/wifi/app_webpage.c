@@ -939,6 +939,13 @@ static void netif_config(void)
         0,
         NULL,
         0);
+    
+    // Display SoftAP IP address
+    printf ("IP address : %d.%d.%d.%d\r\n",
+                          ap_ip_addr0,
+                          ap_ip_addr1,
+                          ap_ip_addr2,
+                          ap_ip_addr3);
 }
 
 /**************************************************************************//**

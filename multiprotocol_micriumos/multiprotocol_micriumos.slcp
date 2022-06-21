@@ -47,7 +47,9 @@ component:
   - id: lwip_api
   - id: lwip_netif_ethernet
   - id: lwip_app_http
-  - id: wfx_secure_link  
+  - id: wfx_secure_link
+  - id: demo_ui
+  - id: dmd_memlcd
 source:
   - path: main.c
   - path: app.c
@@ -147,6 +149,9 @@ configuration:
   - name: SL_WFX_SLK_CURVE25519
     value: "0"
     condition: [wfx_secure_link]
+  - name: SL_BOARD_ENABLE_DISPLAY
+    value: "1"
+    condition: [dmd_memlcd]
 define:
   - name: DEBUG_EFM
 tag:
