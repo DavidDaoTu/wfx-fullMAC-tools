@@ -27,5 +27,6 @@ SL_WEAK void app_init(void)
   // Put your additional application init code here!                         //
   // This is called once during start-up.                                    //
   /////////////////////////////////////////////////////////////////////////////
+  interface_init();  
   app_wifi_commissioning_init();
 }

@@ -1,6 +1,6 @@
-
 #include "interface.h"
 #include "sl_simple_led_instances.h"
+#include "mp-ui.h"
 
 static uint8_t led_state = 0;
 static interface_light_trigger_src_t led_trigger_source = interface_light_trigger_src_button;
@@ -155,4 +155,9 @@ static void apply_light_change (interface_light_trigger_src_t trigger,
     // Set our own MAC in this case
     memcpy(&mac_trigger, &own_mac, sizeof(mac_trigger));
   }
+}
+
+void interface_init(void){
+  mpUIInit();
+  mpUIClearMainScreen((uint8_t *)"Multiprotocol", true, true);
 }

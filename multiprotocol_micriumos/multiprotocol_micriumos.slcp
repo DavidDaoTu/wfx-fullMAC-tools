@@ -68,6 +68,8 @@ source:
     folder: lwip_host/apps
   - path: lwip_host/apps/dhcp_server.c
     folder: lwip_host/apps
+  - path: LCD/mp-ui.c
+    folder: LCD
 include:
   - path: .
     file_list:
@@ -76,6 +78,10 @@ include:
   - path: bluetooth
     file_list:
       - path: app_bluetooth.h  
+  - path: LCD
+    file_list:
+      - path: mp-ui.h
+      - path: mp-bitmaps.h
   - path: wifi
     file_list:
       - path: app_wifi_events.h
@@ -165,4 +171,3 @@ ui_hints:
   highlight:  
   - {path: README.md, focus: true}
   - {path: config/btconf/gatt_configuration.btconf}
-
