@@ -50,6 +50,22 @@ static const sl_cli_command_info_t cli_cmd_reset_cpu = \
                    {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
 
 /**************************************************************************//**
+ *  @brief: Construct the tcp_client_send & tcp_client_stop command
+ *****************************************************************************/
+static const sl_cli_command_info_t cli_cmd_tcp_send = \
+    SL_CLI_COMMAND(tcp_client_send,
+                   "Send a tcp packet",
+                   "tcp_client_send <ip_address> <port> <msg_sz> <interval>" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_STRING, SL_CLI_ARG_UINT16,
+                    SL_CLI_ARG_UINT16, SL_CLI_ARG_UINT32, SL_CLI_ARG_END, });
+
+static const sl_cli_command_info_t cli_cmd_tcp_stop = \
+    SL_CLI_COMMAND(tcp_client_stop,
+                   "Stop sending a tcp packet",
+                   "tcp_client_stop" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
+
+/**************************************************************************//**
  *  @brief: Construct all get commands
  *****************************************************************************/
 static const sl_cli_command_info_t cli_cmd_get_wifi_drv_version = \
@@ -604,6 +620,8 @@ static const sl_cli_command_info_t cli_cmd_ping = \
 *****************************************************************************/
 static const sl_cli_command_entry_t cmds_table[] = {
     {"reset", &cli_cmd_reset_cpu, false},
+    {"tcp_client_send", &cli_cmd_tcp_send, false},
+    {"tcp_client_stop", &cli_cmd_tcp_stop, false},
     {"ping", &cli_cmd_ping, false},
     {"iperf", &cli_cmd_iperf, false},
     {"iperf_server_stop", &cli_cmd_iperf_server_stop, false},

@@ -23,6 +23,12 @@
 #include "wifi_cli_params.h"
 #include "wifi_cli_lwip.h"
 
+// Dz
+#include "lwip/tcpbase.h"
+#include "unistd.h"
+#include "time.h"
+#include "stdint.h"
+#include "stdio.h"
 
 /***************************************************************************//**
  * @brief
@@ -965,6 +971,179 @@ void reset_host_cpu(sl_cli_command_arg_t *args)
   for (;;) {
     __NOP();
   }
+}
+
+/* Dz-tcp send function */
+typedef struct _tcp_state {
+  struct tcp_pcb *server_pcb; // Not used for client mode
+  struct tcp_pcb *conn_pcb;
+  u32_t time_started;
+  ip_addr_t remote_addr;
+  u16_t remote_port;
+  u16_t msg_size;
+  char *p_msg;
+  u32_t interval; // seconds
+} tcp_state_t;
+
+static tcp_state_t g_tcp_state;
+
+void tcp_client_send(sl_cli_command_arg_t *args)
+{
+  int argc;
+  char *err_msg = "Command Error\r\n";
+  char *example_msg = "Example: tcp_client_send <ip_address> <port> <msg_sz> <interval>\r\n";
+  char *ip_str = NULL;
+  char *msg_buf = NULL;
+
+  argc = sl_cli_get_argument_count(args);
+
+  switch(argc) {
+    case 4:
+    /* get the remote IP, msg_size, interval */
+    ip_str = sl_cli_get_argument_string(args, 0);
+    g_tcp_state.remote_port = sl_cli_get_argument_uint16(args, 1);
+    g_tcp_state.msg_size = sl_cli_get_argument_uint16(args, 2);
+    g_tcp_state.interval = sl_cli_get_argument_uint32(args, 3) * 2;
+
+    msg_buf = (char *)malloc(g_tcp_state.msg_size + 2);
+    g_tcp_state.p_msg = msg_buf;
+
+    for (int i = 0; i < g_tcp_state.msg_size; i++) {
+        *msg_buf++ = 'Z';
+    }
+    *msg_buf++ = '\n';
+    *msg_buf = '\0';
+
+    printf("msg_buf = %s, strlen(g_tcp_state.p_msg) = %d\r\n", g_tcp_state.p_msg, strlen(g_tcp_state.p_msg));
+    tcp_send_msg(ip_str);
+    break;
+  default:
+    goto invalid_arg_err;
+    break;
+  }
+  return;
+
+invalid_arg_err:
+  printf("%s%s", err_msg, example_msg);
+}
+
+/* Callback for tcp_sent */
+err_t tcp_client_sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
+{
+  LWIP_UNUSED_ARG(tpcb);
+
+  tcp_state_t *p_tcp_state = (tcp_state_t *)arg;
+  u32_t diff_ms = sys_now() - p_tcp_state->time_started;
+  printf("\r\nTime elapsed : %"PRIu32" ms\r\n", diff_ms);
+  printf("\r\nAcknowledge length = %u \r\n", len);
+}
+
+
+/* Callback for tcp_connect */
+err_t tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
+
+  LWIP_UNUSED_ARG(arg);
+  LWIP_UNUSED_ARG(tpcb);
+  LWIP_UNUSED_ARG(err);
+  printf("\r\nSuccessfully connected! \r\n");
+  return ERR_OK;
+}
+
+err_t tcp_poll_func(void *arg, struct tcp_pcb *tpcb) {
+
+  PP_UNUSED_PARAM(arg);
+  err_t err;
+
+  g_tcp_state.time_started = sys_now();
+
+  err = tcp_write(tpcb,
+                  (const void*) g_tcp_state.p_msg,
+                  g_tcp_state.msg_size,
+                  TCP_WRITE_FLAG_COPY);
+
+  if (err == ERR_OK) {
+      err = tcp_output(tpcb);
+      if (err != ERR_OK) {
+          printf("tcp_output error\r\n", err);
+          return err;
+      }
+      g_tcp_state.time_started = sys_now();
+  } else {
+      printf("write_err = %d\r\n", err);
+  }
+  return err;
+
+}
+
+void close_tcp() {
+  err_t err;
+  if (g_tcp_state.conn_pcb != NULL) {
+    tcp_arg(g_tcp_state.conn_pcb, NULL);
+    tcp_poll(g_tcp_state.conn_pcb, NULL, 0);
+    tcp_sent(g_tcp_state.conn_pcb, NULL);
+
+    err = tcp_close(g_tcp_state.conn_pcb);
+    if (err != ERR_OK) {
+      /* don't want to wait for free memory here... */
+      tcp_abort(g_tcp_state.conn_pcb);
+    }
+    g_tcp_state.conn_pcb = NULL;
+    g_tcp_state.interval = 0;
+    g_tcp_state.msg_size = 0;
+
+    free(g_tcp_state.p_msg);
+    g_tcp_state.p_msg = NULL;
+
+    g_tcp_state.remote_port = 0;
+    g_tcp_state.time_started = 0;
+
+    printf("Stopped client sending\r\n");
+  }
+}
+
+
+sl_status_t tcp_send_msg(char *ip_str){
+  int res = -1;
+  err_t err;
+
+  struct tcp_pcb *tpcb;
+  ip_addr_t remote_addr;
+
+  res = ipaddr_aton(ip_str, &remote_addr);
+  printf("ip_str = %s \r\n", ip_str);
+  if (res == 0) {
+      printf("Failed to convert string (%s) to IP \r\n", ip_str);
+      return SL_STATUS_FAIL;
+  } else {
+      tpcb = tcp_new_ip_type(IP_GET_TYPE(remote_addr));
+      tcp_nagle_disable(tpcb);
+      tpcb->flags |= TF_ACK_NOW;
+      tpcb->flags |= TF_NODELAY;
+
+      printf("The TPCB flags: %"PRIu16" \r\n", tpcb->flags);
+
+      tcp_poll(tpcb, tcp_poll_func, g_tcp_state.interval);
+      tcp_sent(tpcb, tcp_client_sent);
+      tcp_arg(tpcb, (void *)&g_tcp_state);
+
+      err = tcp_connect(tpcb, &remote_addr,
+                        g_tcp_state.remote_port, tcp_connected);
+
+      if (err == ERR_OK) {
+          g_tcp_state.conn_pcb = tpcb;
+      } else {
+          printf("Failed to connect \r\n");
+          close_tcp();
+      }
+  }
+  return SL_STATUS_OK;
+}
+
+
+
+void tcp_client_stop(sl_cli_command_arg_t *args) {
+  PP_UNUSED_PARAM(args);
+  close_tcp();
 }
 
 /**************************************************************************//**
