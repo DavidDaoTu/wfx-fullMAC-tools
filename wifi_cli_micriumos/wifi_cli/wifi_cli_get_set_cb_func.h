@@ -52,6 +52,13 @@ void tcp_client_stop(sl_cli_command_arg_t *args);
 sl_status_t tcp_send_msg(char* ip_str);
 err_t tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 err_t tcp_client_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
+
+/***************************************************************************//**
+ * @brief TCP server commands
+ ******************************************************************************/
+void tcp_server_start(sl_cli_command_arg_t *args);
+void tcp_server_stop(sl_cli_command_arg_t *args);
+
 /***************************************************************************//**
  * @brief Reboot the Wi-Fi transceiver chip
  ******************************************************************************/

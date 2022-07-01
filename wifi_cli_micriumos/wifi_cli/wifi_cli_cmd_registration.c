@@ -48,6 +48,20 @@ static const sl_cli_command_info_t cli_cmd_reset_cpu = \
                    "Reset the host CPU",
                    "reset" SL_CLI_UNIT_SEPARATOR,
                    {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
+/**************************************************************************//**
+ *  @brief: Construct the tcp_server_start/stop
+ *****************************************************************************/
+static const sl_cli_command_info_t cli_cmd_tcp_server_start = \
+    SL_CLI_COMMAND(tcp_server_start,
+                   "Start TCP server",
+                   "tcp_server_start <msg_sz> <interval>" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_UINT16, SL_CLI_ARG_UINT32, SL_CLI_ARG_END, });
+
+static const sl_cli_command_info_t cli_cmd_tcp_server_stop = \
+    SL_CLI_COMMAND(tcp_server_stop,
+                   "Stop TCP server",
+                   "tcp_server_stop" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
 
 /**************************************************************************//**
  *  @brief: Construct the tcp_client_send & tcp_client_stop command
@@ -620,6 +634,8 @@ static const sl_cli_command_info_t cli_cmd_ping = \
 *****************************************************************************/
 static const sl_cli_command_entry_t cmds_table[] = {
     {"reset", &cli_cmd_reset_cpu, false},
+    {"tcp_server_start", &cli_cmd_tcp_server_start, false},
+    {"tcp_server_stop", &cli_cmd_tcp_server_stop, false},
     {"tcp_client_send", &cli_cmd_tcp_send, false},
     {"tcp_client_stop", &cli_cmd_tcp_stop, false},
     {"ping", &cli_cmd_ping, false},
