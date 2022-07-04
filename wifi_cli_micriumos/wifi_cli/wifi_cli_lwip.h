@@ -30,6 +30,24 @@
 #include "lwip/ip.h"
 #include "lwiperf.h"
 
+// tcp client/server
+#include  "lwip/tcpbase.h"
+#include  "unistd.h"
+#include  "time.h"
+#include  "lwip/tcp.h"
+#include  "os_type.h"
+#include  "sl_simple_timer.h"
+
+
+#define TCP_SRV_PORT_DEFAULT  10005
+#define RTOS_ERR_CHECK(e, msg)              \
+        do {                                \
+          if ((e).Code != RTOS_ERR_NONE) {  \
+            printf("%s\r\n", msg);          \
+            return e;                       \
+          }                                 \
+        } while (0)
+
 #define IPERF_DEFAULT_DURATION_SEC          10
 #define IPERF_DEFAULT_PORT                  5001
 
@@ -48,6 +66,48 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* TCP server states */
+enum tcp_erver_states
+{
+  SRV_NONE = 0,
+  SRV_ACCEPTED,
+  SRV_RECEIVED,
+  SRV_CLOSING
+};
+
+typedef struct _tcp_state {
+  struct tcp_pcb *server_pcb; // Not used for client mode
+  struct tcp_pcb *conn_pcb;
+  struct pbuf *p_recv_buf;    // receiving pbuf pointer
+  char *p_send_buf;
+  u32_t time_started;
+  ip_addr_t remote_addr;
+  u16_t remote_port;
+  u8_t state;
+  u16_t msg_size;
+  u32_t interval;             // ms
+  OS_TMR tcp_tmr;
+  OS_TMR_CALLBACK_PTR tcp_tmr_cb;
+} tcp_state_t;
+
+/**************************************************************************//**
+ * @brief: Allocate the sending message string
+ *****************************************************************************/
+void* allocate_sending_msg(u16_t msg_sz);
+
+/**************************************************************************//**
+ * @brief: Start/close TCP server. 
+ *****************************************************************************/
+err_t start_tcp_server(const ip_addr_t *local_addr,
+                        u16_t local_port, 
+                        tcp_state_t *state);
+void close_tcp(tcp_state_t **state);
+
+/**************************************************************************//**
+ * @brief: TCP client send message
+ *****************************************************************************/
+err_t tcp_client_send_msg(tcp_state_t *state);
 
 /**************************************************************************//**
  * @brief: Set station link status to up.

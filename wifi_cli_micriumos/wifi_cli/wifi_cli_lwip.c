@@ -60,6 +60,335 @@ static uint16_t ping_seq_num = 0;
 static uint32_t ping_time = 0;
 
 /**************************************************************************//**
+ * @brief Static TCP function prototypes
+ *****************************************************************************/
+static err_t start_tcp_server_impl(const ip_addr_t *local_addr, 
+                                  u16_t local_port,
+                                  tcp_state_t *state);
+static err_t tcp_srv_accepted_cb(void *arg, 
+                                struct tcp_pcb *newpcb, 
+                                err_t err);
+static void tcp_send_tmr_cb (void  *p_tmr, void  *p_arg);
+
+static void tcp_srv_timer_cb(void *timer, void *data);
+static err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len);
+static RTOS_ERR create_tcp_timer(tcp_state_t *state);
+
+/**************************************************************************//**
+ * @brief start TCP server
+ *****************************************************************************/
+err_t start_tcp_server(const ip_addr_t *local_addr,
+                       u16_t local_port,
+                       tcp_state_t *state)
+{
+  if (local_addr == NULL || state == NULL) {
+    return ERR_ARG;
+  }
+  return start_tcp_server_impl(local_addr, local_port, state);
+}
+
+/**************************************************************************//**
+ * @brief Implementation of TCP server
+ *****************************************************************************/
+static err_t start_tcp_server_impl(const ip_addr_t *local_addr, 
+                                  u16_t local_port,
+                                  tcp_state_t *state)
+{
+  err_t err;
+  struct tcp_pcb *pcb;
+
+  /* Allocate a new TCP pcb */
+  pcb = tcp_new_ip_type(IP_GET_TYPE(*local_addr));
+  if (pcb == NULL) {
+    return ERR_MEM;
+  }
+
+  /* Binding to local address & port */
+  err = tcp_bind(pcb, local_addr, local_port);
+  if (err != ERR_OK) {
+    printf("Bind error %d\r\n", err);
+    tcp_close(pcb);
+    return err;
+  }
+
+  /* Listening  with incomming queue limit */
+  state->server_pcb = tcp_listen_with_backlog(pcb, 1); // pcb will be freed
+  if (state->server_pcb == NULL) {
+    if (pcb != NULL) {
+      tcp_close(pcb);
+    }
+    return ERR_MEM;
+  }
+  pcb = NULL;
+
+  /* Setup callback function */
+  tcp_arg(state->server_pcb, state);
+  tcp_accept(state->server_pcb, tcp_srv_accepted_cb);
+  printf("Successfully start TCP server\r\n");
+  return ERR_OK;
+}
+
+/**************************************************************************//**
+ * @brief Timer callback of TCP server timer for periodically sending
+ *****************************************************************************/
+void tcp_srv_timer_cb(void *timer, void *data) 
+{
+  PP_UNUSED_PARAM(timer);
+  tcp_state_t *s;
+  s = (tcp_state_t *)data;
+  err_t wr_err = ERR_MEM;
+  
+  while ((wr_err == ERR_MEM) &&
+        (s->p_send_buf != NULL) &&
+        s->state != SRV_CLOSING)
+  {
+    wr_err = tcp_write(s->conn_pcb, s->p_send_buf,
+                      s->msg_size, TCP_WRITE_FLAG_COPY);
+
+    if (wr_err == ERR_MEM) {
+      /* we are low on memory, try later / harder, defer to poll */
+      printf("ERR_MEM\r\n");
+    } else {
+      wr_err = tcp_output(s->conn_pcb);
+      if (wr_err != ERR_OK) {
+          printf("tcp_output error\r\n");
+      } else {
+        s->time_started = sys_now();
+      }
+    }
+  }
+}
+
+/**************************************************************************//**
+ * @brief Called after accepting a connection from the client
+ *****************************************************************************/
+err_t tcp_srv_accepted_cb(void *arg, struct tcp_pcb *newpcb, err_t err) 
+{
+  tcp_state_t *s;
+
+  if ((err != ERR_OK) || (newpcb == NULL) || (arg == NULL)) {
+    return ERR_VAL;
+  }
+
+  printf("Client %s:%d connected!\r\n", 
+          ip4addr_ntoa(&newpcb->remote_ip), newpcb->remote_port);
+
+  s = (tcp_state_t *)arg;
+
+  s->state = SRV_ACCEPTED;
+  s->conn_pcb = newpcb;
+  s->p_recv_buf = NULL;
+
+  tcp_arg(newpcb, s);
+  tcp_sent(newpcb, tcp_sent_cb);
+
+  // Start timer
+  s->tcp_tmr_cb = tcp_srv_timer_cb;
+  create_tcp_timer(s);
+  return ERR_OK;
+}
+
+/**************************************************************************//**
+ * @brief allocate the sending message string based on the msg_size
+ *****************************************************************************/
+void* allocate_sending_msg(u16_t msg_sz) 
+{
+  char *msg_buf, *p_char;
+
+  msg_buf = (char *)malloc(msg_sz + 3);
+  if (msg_buf == NULL) {
+      printf("Failed to allocate memory for sending message\r\n");
+  } else {
+      p_char = msg_buf;
+      for (int i = 0; i < msg_sz; i++) {
+          *p_char++ = 'H';
+      }
+      *p_char++ = '\r';
+      *p_char++ = '\n';
+      *p_char   = '\0';     // NULL string
+  }
+  return msg_buf;
+}
+
+/**************************************************************************//**
+ * @brief Called after ack from remote host, compute the sending time
+ *****************************************************************************/
+err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
+{
+  LWIP_UNUSED_ARG(tpcb);
+
+  tcp_state_t *s = (tcp_state_t *)arg;
+  u32_t diff_ms = sys_now() - s->time_started;
+  printf("\r\nTime elapsed : %"PRIu32" ms\r\n", diff_ms);
+  printf("\r\nAcknowledge length = %u \r\n", len);
+  return ERR_OK;
+}
+
+/**************************************************************************//**
+ * @brief Called after connected to the remot server. Start timer for sending
+ *****************************************************************************/
+err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err) 
+{
+  LWIP_UNUSED_ARG(tpcb);
+  LWIP_UNUSED_ARG(err);
+  tcp_state_t *s;
+  RTOS_ERR tmr_err;
+
+  s = (tcp_state_t *)arg;
+  printf("\r\nSuccessfully connected! \r\n");
+
+  // start timer
+  tmr_err = create_tcp_timer(s);
+  if (tmr_err.Code != RTOS_ERR_NONE ) {
+      printf("Failed to start TCP client sending timer\r\n");
+      return ERR_USE;
+  }
+  return ERR_OK;
+}
+
+/**************************************************************************//**
+ * @brief Close all TCP connection & listenning
+ *****************************************************************************/
+void close_tcp(tcp_state_t **state) 
+{
+  err_t err;
+  tcp_state_t *s;
+
+  s = *state;
+  if (s == NULL) {
+      printf("Already close TCP\r\n");
+      return;
+  }
+
+  if (s->conn_pcb != NULL) {
+    tcp_arg(s->conn_pcb, NULL);
+    tcp_sent(s->conn_pcb, NULL);
+
+    err = tcp_close(s->conn_pcb);
+    if (err != ERR_OK) {
+      /* don't want to wait for free memory here... */
+      tcp_abort(s->conn_pcb);
+    }
+    s->conn_pcb = NULL;
+    printf("Connection stopped!\r\n");
+  }
+
+  if (s->server_pcb != NULL) {
+    tcp_arg(s->server_pcb, NULL);
+    tcp_accept(s->server_pcb, NULL);
+
+    err = tcp_close(s->server_pcb);
+    if (err != ERR_OK) {
+      /* don't want to wait for free memory here... */
+      tcp_abort(s->server_pcb);
+    }
+    printf("\r\n TCP server stopped!\r\n");
+  }
+
+  s->interval = 0;
+  s->msg_size = 0;
+
+  if (s->p_send_buf != NULL) {
+      free(s->p_send_buf);
+      s->p_send_buf = NULL;
+  }
+
+  s->remote_port = 0;
+  s->time_started = 0;
+  s->state = SRV_NONE;
+
+  /* Free tcp_state_t */
+  mem_free(s);
+  *state = NULL;
+}
+
+/**************************************************************************//**
+ * @brief Implement TCP client to send message
+ *****************************************************************************/
+err_t tcp_client_send_msg(tcp_state_t *state) 
+{
+  err_t err;
+  struct tcp_pcb *tpcb;
+
+  tpcb = tcp_new_ip_type(IP_GET_TYPE(state->remote_addr));
+  tcp_nagle_disable(tpcb);
+  tpcb->flags |= TF_ACK_NOW;
+  tpcb->flags |= TF_NODELAY;
+
+  state->conn_pcb = tpcb;
+  state->tcp_tmr_cb = tcp_send_tmr_cb; // Set timer cb  
+
+  tcp_arg(tpcb, (void *)state);
+  tcp_sent(tpcb, tcp_sent_cb);
+
+  err = tcp_connect(tpcb, &state->remote_addr,
+                    state->remote_port, tcp_client_connected);
+
+  if (err != ERR_OK) {
+      printf("Failed to connect to remote server!\r\n");
+  }
+  return err;
+}
+
+/**************************************************************************//**
+ * @brief Timer callback for sending messages
+ *****************************************************************************/
+void tcp_send_tmr_cb (void  *p_tmr, void  *p_arg) {
+  
+  PP_UNUSED_PARAM(p_tmr);  
+  err_t err;
+  tcp_state_t *s = (tcp_state_t *)p_arg;
+
+  s->time_started = sys_now();
+
+  /// TODO: Improve the way to write with while loop
+  err = tcp_write(s->conn_pcb,
+                  (const void*) s->p_send_buf,
+                  s->msg_size,
+                  TCP_WRITE_FLAG_COPY);
+
+  if (err == ERR_OK) {
+      err = tcp_output(s->conn_pcb);
+      if (err != ERR_OK) {
+          printf("tcp_output error\r\n");          
+      }
+      s->time_started = sys_now();
+  } else {
+      printf("write_err = %d\r\n", err);
+  }
+}
+
+/**************************************************************************//**
+ * @brief Create & start a timer
+ *****************************************************************************/
+RTOS_ERR create_tcp_timer(tcp_state_t *state) 
+{
+  OS_TICK tmr_tick_interval;    //number of ticks per interval
+                                //for the OSTimeTickRateHzGet
+  OS_RATE_HZ tick_rate;         //OS tick rate
+  RTOS_ERR err;
+
+  tick_rate = OSTimeTickRateHzGet(&err);
+  RTOS_ERR_CHECK(err, "Failed to got tick_rate");
+
+  tmr_tick_interval = (state->interval * tick_rate) / (OSTmrUpdateCnt * 1000);
+
+  OSTmrCreate (&state->tcp_tmr,
+               "TCP timer",
+               0,                     //initial delay
+               tmr_tick_interval,     //
+               OS_OPT_TMR_PERIODIC,   //OS_OPT
+               state->tcp_tmr_cb,     //OS_TMR_CALLBACK_PTR
+               (void *)state,         //callback arg
+               &err);
+  RTOS_ERR_CHECK(err, "Failed to create timer");
+
+  OSTmrStart(&state->tcp_tmr, &err);
+  RTOS_ERR_CHECK(err, "Failed to start timer");
+  return err;
+}
+
+/**************************************************************************//**
  * Set station link status to up.
  *****************************************************************************/
 sl_status_t set_sta_link_up(void)

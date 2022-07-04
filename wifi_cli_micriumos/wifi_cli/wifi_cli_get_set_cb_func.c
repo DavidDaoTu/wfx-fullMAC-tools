@@ -23,212 +23,169 @@
 #include "wifi_cli_params.h"
 #include "wifi_cli_lwip.h"
 
-// Dz
-#include "lwip/tcpbase.h"
-#include "unistd.h"
-#include "time.h"
-#include "stdint.h"
-#include "stdio.h"
-
-
-
-/// TuDV8
-#include "lwip/tcp.h"
-#define TCP_PORT_DEFAULT  10000
-
-/* ECHO protocol states */
-enum tcp_erver_states
-{
-  ES_NONE = 0,
-  ES_ACCEPTED,
-  ES_RECEIVED,
-  ES_CLOSING
-};
-
-
-/** Connection handle for a TCP session */
-typedef struct _tcp_srv_state {
-  struct tcp_pcb *server_pcb;
-  struct tcp_pcb *conn_pcb;
-  u32_t time_started;
-  ip_addr_t remote_addr;  
-  u8_t state;
-  struct pbuf *pb;
-} tcp_srv_state_t;
-
-static tcp_srv_state_t *gp_tcp_srv;
-
-void *start_tcp_server(const ip_addr_t *local_addr, u16_t local_port);
-static err_t start_tcp_server_impl(const ip_addr_t *local_addr, u16_t local_port,
-                                   tcp_srv_state_t **state);
-err_t tcp_accepted_cb(void *arg, struct tcp_pcb *newpcb, err_t err);
-
-err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
-err_t tcp_poll_cb(void *arg, struct tcp_pcb *tpcb);
+/* Private variables for managing TCP connection state */
+static tcp_state_t *g_tcp_client_state = NULL;
+static tcp_state_t *g_tcp_srv_state = NULL;
 
 /***************************************************************************//**
- * @brief
- *        TCP commands
+ * @brief TCP server start command
  ******************************************************************************/
 void tcp_server_start(sl_cli_command_arg_t *args) {
 
   int argc;
-  uint16_t msg_sz;
-  uint32_t interval;
+  err_t err;
   char *help_text = "Invalid argument!\r\n"
-                    "Example: tcp_server_start <msg_sz> <interval>\r\n";
+                    "Example: > tcp_server_start <msg_sz> <interval>\r\n"
+                    "Note: Default port is 10005\r\n";
 
   /* Number of arguments */
   argc = sl_cli_get_argument_count(args);
 
-
   switch (argc) {
     case 2:
-      /* get the remote IP, msg_size, interval */
-      msg_sz = sl_cli_get_argument_uint16(args, 0);
-      interval = sl_cli_get_argument_uint32(args, 1);
-      gp_tcp_srv = (tcp_srv_state_t *)start_tcp_server(IP_ADDR_ANY, TCP_PORT_DEFAULT);
+      if (g_tcp_srv_state == NULL) {
+        g_tcp_srv_state = (tcp_state_t *)mem_malloc(sizeof(tcp_state_t));
+        memset(g_tcp_srv_state, 0, sizeof(tcp_state_t));
+      } else {
+          printf("TCP server is already started! Stop it first\r\n");
+          return;
+      }
 
+      /* get the remote IP, msg_size, interval */
+      g_tcp_srv_state->msg_size = sl_cli_get_argument_uint16(args, 0);
+      g_tcp_srv_state->interval = sl_cli_get_argument_uint32(args, 1);
+      if (g_tcp_srv_state->interval < 100) {
+          printf("Warning: Not recommended the interval < 100ms!!!");
+      }
+
+      g_tcp_srv_state->p_send_buf = allocate_sending_msg(g_tcp_srv_state->msg_size);
+      if (g_tcp_srv_state->p_send_buf == NULL) {
+          close_tcp(&g_tcp_srv_state);
+          return;
+      }
+
+      err = start_tcp_server(IP_ADDR_ANY, TCP_SRV_PORT_DEFAULT, g_tcp_srv_state);
+      if (err != ERR_OK) {
+          printf("Failed to start TCP server\r\n");
+          close_tcp(&g_tcp_srv_state);
+      }
       break;
     default:
       goto error;
       break;
   }
-
   return;
 error:
   printf("%s\r\n", help_text);
 }
 
-
-void *start_tcp_server(const ip_addr_t *local_addr, u16_t local_port)
+/**************************************************************************//**
+ * @brief Stop TCP server
+ *****************************************************************************/
+void tcp_server_stop(sl_cli_command_arg_t *args) 
 {
-
-  err_t err;
-  tcp_srv_state_t *state = NULL;
-
-  err = start_tcp_server_impl(local_addr, local_port, &state);
-  if (err == ERR_OK) {
-    return state;
-  }
-  return NULL;
-}
-
-
-
-
-static err_t start_tcp_server_impl(const ip_addr_t *local_addr, u16_t local_port,
-                                   tcp_srv_state_t **state)
-{
-
-  err_t err;
-  struct tcp_pcb *pcb;
-  tcp_srv_state_t *s; // server session state
-
-  LWIP_ASSERT("state != NULL", state != NULL);
-
-  if (local_addr == NULL) {
-    return ERR_ARG;
-  }
-
-  s = (tcp_srv_state_t *)mem_malloc(sizeof(tcp_srv_state_t));
-  if (s == NULL) {
-    return ERR_MEM;
-  }
-
-  memset(s, 0, sizeof(tcp_srv_state_t));
-
-  /* Allocate a new TCP pcb */
-  pcb = tcp_new_ip_type(IPADDR_TYPE_ANY);
-  if (pcb == NULL) {
-    return ERR_MEM;
-  }
-
-
-  /* Binding to local address & port */
-  err = tcp_bind(pcb, local_addr, local_port);
-  if (err != ERR_OK) {
-    printf("Bind error %d\r\n", err);
-    return err;
-  }
-
-  /* Listening  with incomming queue limit */
-  s->server_pcb = tcp_listen_with_backlog(pcb, 1); // pcb will be freed
-  if (s->server_pcb == NULL) {
-    if (pcb != NULL) {
-      tcp_close(pcb);
-    }
-    mem_free(s);
-    return ERR_MEM;
-  }
-
-  pcb = NULL;
-
-  /* Setup callback function */
-  tcp_arg(s->server_pcb, s);
-  tcp_accept(s->server_pcb, tcp_accepted_cb);
-
-  *state = s;
-  printf("Successfully start TCP server\r\n");
-  return ERR_OK;
-
-}
-
-err_t tcp_accepted_cb(void *arg, struct tcp_pcb *newpcb, err_t err) {
-
-  tcp_srv_state_t *s;
-
-  if ((err != ERR_OK) || (newpcb == NULL) || (arg == NULL)) {
-    return ERR_VAL;
-  }
-
-  printf("Client %s:%d connected!\r\n", ip4addr_ntoa(&newpcb->remote_ip), newpcb->remote_port);
-
-  s = (tcp_srv_state_t *)arg;
-  s->state = ES_ACCEPTED;
-  s->conn_pcb = newpcb;
-  tcp_arg(newpcb, s);
-  tcp_recv(newpcb, tcp_recv_cb);
-  tcp_poll(newpcb, tcp_poll_cb, 5);
-
-  return ERR_OK;
-}
-
-err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
-  printf("\r\r Inside tcp_recv_cb\r\n");
-  return ERR_OK;
-}
-
-err_t tcp_poll_cb(void *arg, struct tcp_pcb *tpcb) {
-  printf("waiting..\r\n");
-  return ERR_OK;
-}
-
-void tcp_server_stop(sl_cli_command_arg_t *args) {
   PP_UNUSED_PARAM(args);
+  RTOS_ERR tmr_stop_err;
+
+  if (g_tcp_srv_state != NULL) {
+      if (g_tcp_srv_state->state == SRV_ACCEPTED ) {
+
+          g_tcp_srv_state->state = SRV_CLOSING;
+          OSTmrStop(&g_tcp_srv_state->tcp_tmr,
+                    OS_OPT_TMR_CALLBACK,
+                    NULL,
+                    &tmr_stop_err);
+          if (tmr_stop_err.Code != RTOS_ERR_NONE) {
+              printf("Failed to stop timer\r\n");
+          }
+      }
+      close_tcp(&g_tcp_srv_state);
+  } else {
+      printf("Already stopped!\r\n");
+  }
+}
+
+/***************************************************************************//**
+ * @brief TCP client send command in the wifi_cli_micriumos
+ ******************************************************************************/
+void tcp_client_send(sl_cli_command_arg_t *args)
+{
+  int argc, res;
   err_t err;
-  if (gp_tcp_srv->conn_pcb != NULL) {
-      tcp_arg(gp_tcp_srv->conn_pcb, NULL);
-      tcp_poll(gp_tcp_srv->conn_pcb, NULL, 0);
-      tcp_sent(gp_tcp_srv->conn_pcb, NULL);
-      tcp_recv(gp_tcp_srv->conn_pcb, NULL);
-      tcp_err(gp_tcp_srv->conn_pcb, NULL);
-      err = tcp_close(gp_tcp_srv->conn_pcb);
-      if (err != ERR_OK) {
-        /* don't want to wait for free memory here... */
-        tcp_abort(gp_tcp_srv->conn_pcb);
+  char *err_msg = "Command Error\r\n";
+  char *example_msg = "Example: tcp_client_send <ip_address> <port> <msg_sz> <interval>\r\n";
+  char *ip_str = NULL;
+
+  argc = sl_cli_get_argument_count(args);
+
+  switch(argc) {
+    case 4:
+      if (g_tcp_client_state == NULL) {
+          g_tcp_client_state = (tcp_state_t *)mem_malloc(sizeof(tcp_state_t));
+          memset(g_tcp_client_state, 0, sizeof(tcp_state_t));
+      } else {
+          printf("TCP client is already started! Stop it first\r\n");
+          return;
       }
 
-  }
+    /* get the remote IP, msg_size, interval */
+    ip_str = sl_cli_get_argument_string(args, 0);
+    res = ipaddr_aton(ip_str, &(g_tcp_client_state->remote_addr));
+    printf("ip_str = %s \r\n", ip_str);
+    if (res == 0) {
+        printf("Failed to convert string (%s) to IP \r\n", ip_str);
+        return;
+    }
+    g_tcp_client_state->remote_port = sl_cli_get_argument_uint16(args, 1);
+    g_tcp_client_state->msg_size = sl_cli_get_argument_uint16(args, 2);
+    g_tcp_client_state->interval = sl_cli_get_argument_uint32(args, 3);
+    g_tcp_client_state->p_send_buf = allocate_sending_msg(g_tcp_client_state->msg_size);    
+    if (g_tcp_client_state->p_send_buf == NULL) {
+        mem_free(g_tcp_client_state);
+        return;
+    }
+    printf("msg_buf = %s, strlen(g_tcp_state.p_msg) = %d\r\n",
+           g_tcp_client_state->p_send_buf, strlen(g_tcp_client_state->p_send_buf));
 
-  if (gp_tcp_srv->server_pcb != NULL){
-    err = tcp_close(gp_tcp_srv->server_pcb);
-    mem_free(gp_tcp_srv);
-    printf("\r\n TCP server stopped!\r\n");
+    err = tcp_client_send_msg(g_tcp_client_state);
+    if (err != ERR_OK) {
+        close_tcp(&g_tcp_client_state);
+    }
+    break;
+  default:
+    goto invalid_arg_err;
+    break;
   }
+  return;
 
+invalid_arg_err:
+  printf("%s%s", err_msg, example_msg);
 }
 
+/**************************************************************************//**
+ * @brief Stop the timer
+ *****************************************************************************/
+void tcp_client_stop(sl_cli_command_arg_t *args) 
+{
+  PP_UNUSED_PARAM(args);
+  RTOS_ERR tmr_stop_err;
+
+  if (g_tcp_client_state != NULL) {
+      if (OSTmrStateGet(&g_tcp_client_state->tcp_tmr, 
+                        &tmr_stop_err) == OS_TMR_STATE_RUNNING) {
+          OSTmrStop(&g_tcp_client_state->tcp_tmr,
+                    OS_OPT_TMR_NONE,
+                    NULL,
+                    &tmr_stop_err);
+          if (tmr_stop_err.Code != RTOS_ERR_NONE) {
+              printf("Failed to stop timer\r\n");
+          }
+      }
+      close_tcp(&g_tcp_client_state);
+  } else {
+      printf("Already stopped!\r\n");
+  }
+}
 /***************************************************************************//**
  * @brief
  *        Check hex format (0x/0X) of the input string
@@ -1170,256 +1127,6 @@ void reset_host_cpu(sl_cli_command_arg_t *args)
   for (;;) {
     __NOP();
   }
-}
-
-/* Dz-tcp send function */
-typedef struct _tcp_state {
-  struct tcp_pcb *server_pcb; // Not used for client mode
-  struct tcp_pcb *conn_pcb;
-  u32_t time_started;
-  ip_addr_t remote_addr;
-  u16_t remote_port;
-  u16_t msg_size;
-  char *p_msg;
-  u32_t interval; // seconds
-} tcp_state_t;
-
-static tcp_state_t g_tcp_state;
-OS_TMR tcp_send_tmr;
-
-void tcp_client_send(sl_cli_command_arg_t *args)
-{
-  int argc;
-  char *err_msg = "Command Error\r\n";
-  char *example_msg = "Example: tcp_client_send <ip_address> <port> <msg_sz> <interval>\r\n";
-  char *ip_str = NULL;
-  char *msg_buf = NULL;
-
-  argc = sl_cli_get_argument_count(args);
-
-  switch(argc) {
-    case 4:
-    /* get the remote IP, msg_size, interval */
-    ip_str = sl_cli_get_argument_string(args, 0);
-    g_tcp_state.remote_port = sl_cli_get_argument_uint16(args, 1);
-    g_tcp_state.msg_size = sl_cli_get_argument_uint16(args, 2);
-    g_tcp_state.interval = sl_cli_get_argument_uint32(args, 3);
-
-    msg_buf = (char *)malloc(g_tcp_state.msg_size + 2);
-    g_tcp_state.p_msg = msg_buf;
-
-    for (int i = 0; i < g_tcp_state.msg_size; i++) {
-        *msg_buf++ = 'Z';
-    }
-    *msg_buf++ = '\n';
-    *msg_buf = '\0';
-
-    printf("msg_buf = %s, strlen(g_tcp_state.p_msg) = %d\r\n", g_tcp_state.p_msg, strlen(g_tcp_state.p_msg));
-    tcp_send_msg(ip_str);
-    break;
-  default:
-    goto invalid_arg_err;
-    break;
-  }
-  return;
-
-invalid_arg_err:
-  printf("%s%s", err_msg, example_msg);
-}
-
-/* Callback for tcp_sent */
-err_t tcp_client_sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
-{
-  LWIP_UNUSED_ARG(tpcb);
-
-  tcp_state_t *p_tcp_state = (tcp_state_t *)arg;
-  u32_t diff_ms = sys_now() - p_tcp_state->time_started;
-  printf("\r\nTime elapsed : %"PRIu32" ms\r\n", diff_ms);
-  printf("\r\nAcknowledge length = %u \r\n", len);
-}
-
-
-/* Callback for tcp_connect */
-err_t tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
-
-  LWIP_UNUSED_ARG(arg);
-  LWIP_UNUSED_ARG(tpcb);
-  LWIP_UNUSED_ARG(err);
-  printf("\r\nSuccessfully connected! \r\n");
-  return ERR_OK;
-}
-
-err_t tcp_poll_func(void *arg, struct tcp_pcb *tpcb) {
-
-  PP_UNUSED_PARAM(arg);
-  err_t err;
-
-  g_tcp_state.time_started = sys_now();
-
-  err = tcp_write(tpcb,
-                  (const void*) g_tcp_state.p_msg,
-                  g_tcp_state.msg_size,
-                  TCP_WRITE_FLAG_COPY);
-
-  if (err == ERR_OK) {
-      err = tcp_output(tpcb);
-      if (err != ERR_OK) {
-          printf("tcp_output error\r\n", err);
-          return err;
-      }
-      g_tcp_state.time_started = sys_now();
-  } else {
-      printf("write_err = %d\r\n", err);
-  }
-  return err;
-
-}
-
-void close_tcp() {
-  err_t err;
-  if (g_tcp_state.conn_pcb != NULL) {
-    tcp_arg(g_tcp_state.conn_pcb, NULL);
-    tcp_poll(g_tcp_state.conn_pcb, NULL, 0);
-    tcp_sent(g_tcp_state.conn_pcb, NULL);
-
-    err = tcp_close(g_tcp_state.conn_pcb);
-    if (err != ERR_OK) {
-      /* don't want to wait for free memory here... */
-      tcp_abort(g_tcp_state.conn_pcb);
-    }
-    g_tcp_state.conn_pcb = NULL;
-    g_tcp_state.interval = 0;
-    g_tcp_state.msg_size = 0;
-
-    free(g_tcp_state.p_msg);
-    g_tcp_state.p_msg = NULL;
-
-    g_tcp_state.remote_port = 0;
-    g_tcp_state.time_started = 0;
-
-    printf("Stopped client sending\r\n");
-  }
-}
-
-
-sl_status_t tcp_send_msg(char *ip_str){
-  int res = -1;
-  err_t err;
-
-  struct tcp_pcb *tpcb;
-  ip_addr_t remote_addr;
-
-  res = ipaddr_aton(ip_str, &remote_addr);
-  printf("ip_str = %s \r\n", ip_str);
-  if (res == 0) {
-      printf("Failed to convert string (%s) to IP \r\n", ip_str);
-      return SL_STATUS_FAIL;
-  } else {
-      tpcb = tcp_new_ip_type(IP_GET_TYPE(remote_addr));
-      tcp_nagle_disable(tpcb);
-      tpcb->flags |= TF_ACK_NOW;
-      tpcb->flags |= TF_NODELAY;
-
-      printf("The TPCB flags: %"PRIu16" \r\n", tpcb->flags);
-
-      //tcp_poll(tpcb, tcp_poll_func, g_tcp_state.interval);
-      create_tcp_timer();
-      tcp_sent(tpcb, tcp_client_sent);
-      tcp_arg(tpcb, (void *)&g_tcp_state);
-
-      err = tcp_connect(tpcb, &remote_addr,
-                        g_tcp_state.remote_port, tcp_connected);
-
-      if (err == ERR_OK) {
-          g_tcp_state.conn_pcb = tpcb;
-      } else {
-          printf("Failed to connect \r\n");
-          close_tcp();
-      }
-  }
-  return SL_STATUS_OK;
-}
-
-void tcp_send_tmr_cb (void  *p_tmr, void  *p_arg){
-  PP_UNUSED_PARAM(p_tmr);
-  tcp_state_t *p_tcp_state = (tcp_state_t *)p_arg;
-
-  //printf("Inside the tcp_send OS Timer\r\n");
-  err_t err;
-
-  g_tcp_state.time_started = sys_now();
-
-  err = tcp_write(g_tcp_state.conn_pcb,
-                  (const void*) g_tcp_state.p_msg,
-                  g_tcp_state.msg_size,
-                  TCP_WRITE_FLAG_COPY);
-
-  if (err == ERR_OK) {
-      err = tcp_output(g_tcp_state.conn_pcb);
-      if (err != ERR_OK) {
-          printf("tcp_output error\r\n", err);
-          //return err;
-      }
-      g_tcp_state.time_started = sys_now();
-  } else {
-      printf("write_err = %d\r\n", err);
-  }
-  //return err;
-}
-
-void create_tcp_timer(void){
-  OS_TICK tmr_tick_interval;  //number of ticks per interval
-  RTOS_ERR err;               //for the OSTimeTickRateHzGet
-  OS_RATE_HZ tick_rate;       //OS tick rate
-
-  tick_rate = OSTimeTickRateHzGet(&err);
-  //RTOS_ERROR_CHECK(err);
-  tmr_tick_interval = (g_tcp_state.interval * tick_rate) / (OSTmrUpdateCnt * 1000);
-  //printf("Tick rate: %"PRIu32", interval in ms: %"PRIu32" ", tick_rate, g_tcp_state.interval);
-  //printf("Tick_interval in OS_TICK:%"PRIu32"\r\n", tmr_tick_interval);
-  //printf("Counter for updating timer: %"PRIu32"\r\n", OSTmrUpdateCnt);
-  RTOS_ERR    tmr_err;
-  OSTmrCreate (&tcp_send_tmr,
-               "TCP send timer",
-               0,                     //initial delay
-               tmr_tick_interval,     //
-               OS_OPT_TMR_PERIODIC,   //OS_OPT
-               tcp_send_tmr_cb,       //OS_TMR_CALLBACK_PTR
-               //NULL,
-               (void *)&g_tcp_state,  //callback arg
-               &tmr_err);
-  if (tmr_err.Code != RTOS_ERR_NONE) {
-          // Handle error on timer create.
-        printf("Failed to create a timer\r\n");
-      }
-  else {
-    //printf("Successfully created a timer\r\n");
-  }
-
-
-
-  RTOS_ERR    start_err;
-  OSTmrStart(&tcp_send_tmr, &start_err);
-
-  if (start_err.Code != RTOS_ERR_NONE) {
-          /* Handle error on timer start. */
-      printf("Failed to start a timer!\r\n");
-      }
-  else {
-    //printf("Successfully started a timer\r\n");
-  }
-
-
-}
-
-void tcp_client_stop(sl_cli_command_arg_t *args) {
-  RTOS_ERR tmr_stop_err;
-  PP_UNUSED_PARAM(args);
-  OSTmrStop(&tcp_send_tmr,
-            OS_OPT_TMR_NONE,
-            NULL,
-            &tmr_stop_err);
-  close_tcp();
 }
 
 /**************************************************************************//**
