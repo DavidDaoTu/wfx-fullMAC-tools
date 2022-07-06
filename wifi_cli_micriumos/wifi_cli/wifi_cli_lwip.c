@@ -73,7 +73,9 @@ static void tcp_send_tmr_cb (void  *p_tmr, void  *p_arg);
 static void tcp_srv_timer_cb(void *timer, void *data);
 static err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len);
 static RTOS_ERR create_tcp_timer(tcp_state_t *state);
-
+static void tcp_srv_err_cb(void *arg, err_t err);
+static err_t tcp_srv_recv_cb(void *arg, struct tcp_pcb *tpcb,
+                             struct pbuf *p, err_t err);
 /**************************************************************************//**
  * @brief start TCP server
  *****************************************************************************/
@@ -124,7 +126,9 @@ static err_t start_tcp_server_impl(const ip_addr_t *local_addr,
   /* Setup callback function */
   tcp_arg(state->server_pcb, state);
   tcp_accept(state->server_pcb, tcp_srv_accepted_cb);
-  printf("Successfully start TCP server\r\n");
+
+  printf("Successfully start TCP server & listening on port %lu\r\n",
+         TCP_SRV_PORT_DEFAULT);
   return ERR_OK;
 }
 
@@ -179,12 +183,61 @@ err_t tcp_srv_accepted_cb(void *arg, struct tcp_pcb *newpcb, err_t err)
   s->conn_pcb = newpcb;
   s->p_recv_buf = NULL;
 
+  /* Setup callabck functions called when a new client connected */
   tcp_arg(newpcb, s);
+  tcp_recv(newpcb, tcp_srv_recv_cb);
   tcp_sent(newpcb, tcp_sent_cb);
+  tcp_err(s->conn_pcb, tcp_srv_err_cb); // handles disconnected client
 
   // Start timer
   s->tcp_tmr_cb = tcp_srv_timer_cb;
   create_tcp_timer(s);
+  return ERR_OK;
+}
+
+void tcp_srv_err_cb(void *arg, err_t err) {
+
+  tcp_state_t *s;
+  s = (tcp_state_t *)arg;
+  RTOS_ERR tmr_stop_err;
+
+  printf("Closing the tcp client connection\r\n");
+
+  if (s->conn_pcb != NULL) {
+    tcp_arg(s->conn_pcb, NULL);
+    tcp_poll(s->conn_pcb, NULL, 0);
+    tcp_sent(s->conn_pcb, NULL);
+    tcp_recv(s->conn_pcb, NULL);
+    tcp_err(s->conn_pcb, NULL);
+    err = tcp_close(s->conn_pcb);
+    if (err != ERR_OK) {
+      /* don't want to wait for free memory here... */
+      tcp_abort(s->conn_pcb);
+    }
+  }
+
+  if (s->state == SRV_ACCEPTED ) {
+
+      s->state = SRV_NONE;
+      OSTmrStop(&s->tcp_tmr,
+                OS_OPT_TMR_CALLBACK,
+                NULL,
+                &tmr_stop_err);
+      if (tmr_stop_err.Code != RTOS_ERR_NONE) {
+          printf("Failed to stop timer\r\n");
+      }
+  }
+
+}
+
+
+err_t tcp_srv_recv_cb(void *arg, struct tcp_pcb *tpcb,
+                      struct pbuf *p, err_t err)
+{
+  if (p == NULL) {
+     printf("Client is disconnected\r\n");
+     tcp_srv_err_cb(arg, err);
+  }
   return ERR_OK;
 }
 
