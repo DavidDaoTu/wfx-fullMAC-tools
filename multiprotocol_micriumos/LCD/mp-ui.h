@@ -14,8 +14,8 @@
  * sections of the MSLA applicable to Source Code.
  *
  ******************************************************************************/
-//#ifndef DEMO_UI_H
-//#define DEMO_UI_H
+#ifndef MP_UI_H
+#define MP_UI_H
 
 /**************************************************************************//**
 * DEMO UI uses the underlying DMD interface and the GLIB and exposes several
@@ -171,4 +171,4 @@ void mpUIClearMainScreen(uint8_t* name, bool showPROT1, bool showPROT2);
  *****************************************************************************/
 void mpUIDisplayChan(uint8_t channel);
 
-//#endif //DEMO_UI_H
+#endif //MP_UI_H
