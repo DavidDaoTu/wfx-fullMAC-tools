@@ -648,22 +648,21 @@ static uint16_t ssi_handler(int index, char* pc_insert, int insert_len)
         break;
     case 17: // <!--#ble_state-->
       //Dz
-      /*
+
       value = bluetooth_app_get_ble_state();
       result = snprintf(pc_insert, 2, "%d", value);
-      */
+
         break;
     case 18: // <!--#ble_name-->
       //Dz
-      /*
+
       bluetooth_app_get_own_name(pc_insert, LWIP_HTTPD_MAX_TAG_INSERT_LEN);
       result = strlen(pc_insert);
-      */
+
         break;
     case 19: // <!--#ble_mac-->
     {
-        // Dz
-        /*
+
         bd_addr ble_id = {0};
         bluetooth_app_get_own_mac(&ble_id);
         result = sprintf(pc_insert,
@@ -674,13 +673,11 @@ static uint16_t ssi_handler(int index, char* pc_insert, int insert_len)
                          ble_id.addr[2],
                          ble_id.addr[1],
                          ble_id.addr[0]);
-        */
+
         break;
     }
     case 20: // <!--#master_list-->
     {
-        // Dz
-        /*
         bd_addr master_id = {0};
         int res = bluetooth_app_get_master_mac(&master_id);
         if (res == 0) {
@@ -694,7 +691,7 @@ static uint16_t ssi_handler(int index, char* pc_insert, int insert_len)
                            master_id.addr[2],
                            master_id.addr[1],
                            master_id.addr[0]);
-        }*/
+        }
         break;
     }
     default:

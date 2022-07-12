@@ -47,6 +47,7 @@ static uint8_t ble_state = 0;
 
 static BleConn_t ble_conn[SL_BT_CONFIG_MAX_CONNECTIONS];
 static bd_addr ble_own_addr = {0};
+static char ble_own_name[DEVNAME_LEN] = {0};
 
 // Timers for periodic & timeout indication
 static sl_simple_timer_t app_bt_timers[2]; // periodic & timeout timer handles
@@ -304,7 +305,8 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
       memcpy((void *)&ble_own_addr, (void *)&address, sizeof(ble_own_addr));
       // Update the LCD display with the BLE Id
       interface_display_ble_id((uint8_t *)&ble_own_addr.addr);
-
+      snprintf(ble_own_name, DEVNAME_LEN, "MP%02X%02X",
+               ble_own_addr.addr[1], ble_own_addr.addr[0]);
       // Create an advertising set.
       sc = sl_bt_advertiser_create_set(&advertising_set_handle);
       app_assert_status(sc);
@@ -540,4 +542,56 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
     default:
       break;
   }
+}
+
+uint8_t bluetooth_app_get_ble_state (void)
+{
+  return ble_state;
+}
+
+void bluetooth_app_get_own_mac (bd_addr *mac)
+{
+  if (mac != NULL) {
+    memcpy(mac, &ble_own_addr, sizeof(bd_addr));
+  }
+}
+
+int bluetooth_app_get_master_mac (bd_addr *mac)
+{
+  BleConn_t *conn;
+  int ret = -1;
+
+  if (mac != NULL) {
+    conn = bleConnGet(BLE_MASTER_CONNECTION);
+    if (conn != NULL) {
+      memcpy(mac, &conn->address, sizeof(bd_addr));
+      ret = 0;
+    }
+  }
+
+  return ret;
+}
+
+void bluetooth_app_get_own_name (char *name, int name_size)
+{
+  if (name != NULL) {
+    strncpy(name, ble_own_name, name_size);
+  }
+}
+
+int bluetooth_app_get_master_name (char *name, int name_size)
+{
+  BleConn_t *conn;
+  int ret = -1;
+
+  if (name != NULL) {
+    conn = bleConnGet(BLE_MASTER_CONNECTION);
+    if (conn != NULL) {
+      strncpy(name, conn->name, name_size);
+      name[name_size-1] = '\0';
+      ret = 0;
+    }
+  }
+
+  return ret;
 }
