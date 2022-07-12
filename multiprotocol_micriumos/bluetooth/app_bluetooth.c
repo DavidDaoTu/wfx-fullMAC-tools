@@ -48,12 +48,9 @@ static uint8_t ble_state = 0;
 static BleConn_t ble_conn[SL_BT_CONFIG_MAX_CONNECTIONS];
 static bd_addr ble_own_addr = {0};
 
-// Timer for periodic indication
-static sl_simple_timer_t app_bt_timers[2]; // period & timeout timer handles
-
-
+// Timers for periodic & timeout indication
+static sl_simple_timer_t app_bt_timers[2]; // periodic & timeout timer handles
 static BleTimer_t g_timer_types[2] = {bleTimerIndicatePeriod, bleTimerIndicateTimeout};
-
 static void app_single_timer_cb(sl_simple_timer_t *handle, void *data);
 
 
@@ -396,10 +393,6 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
           if (connPoi != NULL) {
             interface_light_set_state(interface_light_trigger_src_bluetooth,
                                       &connPoi->address,
-                                      evt->data.evt_gatt_server_user_write_request.value.data[0]);
-            
-            interface_light_set_state(interface_light_trigger_src_bluetooth,
-                                      &evt->data.evt_connection_opened.address,
                                       evt->data.evt_gatt_server_user_write_request.value.data[0]);
             
             /* Send response to write request */
