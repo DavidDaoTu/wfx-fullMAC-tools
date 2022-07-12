@@ -30,7 +30,6 @@
 #include "dhcp_server.h"
 #include "app_webpage.h"
 #include "app_wifi_events.h"
-
 // Event Task Configurations
 #define WFX_EVENTS_TASK_PRIO              21u
 #define WFX_EVENTS_TASK_STK_SIZE        1024u
@@ -325,7 +324,7 @@ void sl_wfx_start_ap_callback(sl_wfx_start_ap_ind_t *start_ap)
     printf("AP started\r\n");
     printf("Join the AP with SSID: %s\r\n", softap_ssid);
     sl_wfx_context->state |= SL_WFX_AP_INTERFACE_UP;
-
+    interface_display_wifi_state(true);
     status = sl_wfx_host_allocate_buffer(&buffer,
                                          SL_WFX_RX_FRAME_BUFFER,
                                          start_ap->header.length);
@@ -355,7 +354,7 @@ void sl_wfx_stop_ap_callback(sl_wfx_stop_ap_ind_t *stop_ap)
   printf("SoftAP stopped\r\n");
   dhcpserver_clear_stored_mac();
   sl_wfx_context->state &= ~SL_WFX_AP_INTERFACE_UP;
-
+  interface_display_wifi_state(false);
   status = sl_wfx_host_allocate_buffer(&buffer,
                                        SL_WFX_RX_FRAME_BUFFER,
                                        stop_ap->length);

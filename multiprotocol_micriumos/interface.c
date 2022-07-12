@@ -50,6 +50,16 @@ void interface_light_on (interface_light_trigger_src_t trigger,
   apply_light_change(trigger, mac, 1);
 }
 
+void interface_light_toggle (interface_light_trigger_src_t trigger,
+                             interface_mac_t *mac)
+{
+  // Toggle the LEDs
+  sl_led_toggle(&sl_led_led0);
+  sl_led_toggle(&sl_led_led1);
+
+  apply_light_change(trigger, mac, !led_state);
+}
+
 void interface_light_set_state (interface_light_trigger_src_t trigger,
                                 interface_mac_t *mac,
                                 uint8_t new_led_state)
@@ -155,6 +165,13 @@ static void apply_light_change (interface_light_trigger_src_t trigger,
   // Store data
   led_state = new_state;
   led_trigger_source = trigger;
+  printf("MAC address of triggered source (%02X%02X%02X%02X%02X%02X)\r\n",
+         mac->addr[5],
+         mac->addr[4],
+         mac->addr[3],
+         mac->addr[2],
+         mac->addr[1],
+         mac->addr[0]);
   if (mac != NULL) {
     memcpy(&mac_trigger, mac, sizeof(mac_trigger));
   } else {

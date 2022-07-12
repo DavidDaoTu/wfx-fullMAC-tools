@@ -18,7 +18,8 @@ void interface_light_off(interface_light_trigger_src_t trigger,
 
 void interface_light_on(interface_light_trigger_src_t trigger,
                         interface_mac_t *mac);
-
+void interface_light_toggle (interface_light_trigger_src_t trigger,
+                             interface_mac_t *mac);
 void interface_light_set_state(interface_light_trigger_src_t trigger,
                                interface_mac_t *mac,
                                uint8_t new_led_state);

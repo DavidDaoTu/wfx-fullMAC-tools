@@ -45,6 +45,7 @@
 #include "sl_wfx_host.h"
 #include "app_wifi_events.h"
 #include "app_webpage.h"
+#include "interface.h"
 
 #ifdef IPERF_SERVER
 #include "lwip/apps/lwiperf.h"
@@ -154,7 +155,6 @@ static char from_hex(char ch);
 static sl_status_t url_decode(char* str);
 /// CGI handlers
 static const char* toggle_leds_cgi_handler(int index, int num_params, char* pc_param[], char* pc_value[]);
-static const char* toggle_two_leds_cgi_handler(int index, int num_params, char* pc_param[], char* pc_value[]);
 static const char* get_leds_state_cgi_handler(int index, int num_params, char* pc_param[], char* pc_value[]);
 static const char* get_interface_states_cgi_handler(int index, int num_params, char* pc_param[], char* pc_value[]);
 static const char* start_ble_advertising_cgi_handler(int index, int num_params, char* pc_param[], char* pc_value[]);
@@ -170,7 +170,6 @@ static const char* start_scan_cgi_handler(int index, int num_params, char* pc_pa
 /// Table of the CGI names and handlers.
 static const tCGI cgi_table[] = {
   {"/toggle_leds.cgi", toggle_leds_cgi_handler},
-  {"/toggle_two_leds.cgi", toggle_two_leds_cgi_handler},
   {"/get_leds_state.cgi", get_leds_state_cgi_handler},
   {"/get_interface_states.cgi", get_interface_states_cgi_handler},
   {"/start_ble_beacon.cgi", start_ble_advertising_cgi_handler},
@@ -226,35 +225,17 @@ static const char* toggle_leds_cgi_handler(int index,
     char* pc_param[],
     char* pc_value[])
 {
-    //interface_light_toggle(interface_light_trigger_src_wifi,
-    //(interface_mac_t *)wifi.mac_addr_1.octet);
-
-    return "/empty.json";
-}
-
-static const char* toggle_two_leds_cgi_handler(int index,
-    int num_params,
-    char* pc_param[],
-    char* pc_value[])
-{
-    //interface_light_toggle(interface_light_trigger_src_wifi,
-    //(interface_mac_t *)wifi.mac_addr_1.octet);
-    printf("Received toggle_two_leds command\r\n");
-    (void)index;
-
-    // Check the cgi parameters
-    for (uint16_t i = 0; i < num_params; i++) {
-        if (strcmp(pc_param[i], "led_id") == 0) {
-            if (strcmp(pc_value[i], "0") == 0) {
-                printf("LED 0 toggled\r\n");
-                sl_led_led0.toggle(sl_led_led0.context);
-            }
-            else if (strcmp(pc_value[i], "1") == 0) {
-                printf("LED 1 toggled\r\n");
-                sl_led_led1.toggle(sl_led_led1.context);
-            }
-        }
-    }
+    interface_light_toggle(interface_light_trigger_src_wifi,
+                           (interface_mac_t *)wifi.mac_addr_1.octet);
+    /*
+    printf("Toggled LED (%02X%02X%02X%02X%02X%02X)\r\n",
+           wifi.mac_addr_1.octet[0],
+           wifi.mac_addr_1.octet[1],
+           wifi.mac_addr_1.octet[2],
+           wifi.mac_addr_1.octet[3],
+           wifi.mac_addr_1.octet[4],
+           wifi.mac_addr_1.octet[5]);
+    */
     return "/empty.json";
 }
 
@@ -501,11 +482,10 @@ static uint16_t ssi_handler(int index, char* pc_insert, int insert_len)
 
     switch (index) {
     case 0: // <!--#leds_state-->
-      //Dz
-      /*
+
       value = interface_light_get_state();
       result = snprintf(pc_insert, 2, "%d", value);
-      */
+
         break;
     case 1: // <!--#scan_list-->
         for (int i = 0; i < scan_count_web; i++) {
