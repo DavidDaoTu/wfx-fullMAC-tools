@@ -47,6 +47,8 @@
 #include "app_webpage.h"
 #include "interface.h"
 
+#include "app_bluetooth.h"
+
 #ifdef IPERF_SERVER
 #include "lwip/apps/lwiperf.h"
 #endif
@@ -269,7 +271,7 @@ static const char* start_ble_advertising_cgi_handler(int index,
     char* pc_param[],
     char* pc_value[])
 {
-    //bluetooth_app_start_advertising();
+    bluetooth_app_start_advertising();
     return "/empty.json";
 }
 
@@ -281,7 +283,7 @@ static const char* stop_ble_advertising_cgi_handler(int index,
     char* pc_param[],
     char* pc_value[])
 {
-    //bluetooth_app_stop_advertising();
+    bluetooth_app_stop_advertising();
     return "/empty.json";
 }
 
@@ -923,6 +925,11 @@ static void netif_config(void)
                           ap_ip_addr1,
                           ap_ip_addr2,
                           ap_ip_addr3);
+
+    // Display BLE boot message
+    if (strlen(boot_message)) {
+        printf("%s\r\n", boot_message);
+    }
 }
 
 /**************************************************************************//**

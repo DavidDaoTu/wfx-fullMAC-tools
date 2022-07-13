@@ -16,10 +16,13 @@
 
 #define BLE_MASTER_NAME_MAX_LEN                   15
 #define BLE_MASTER_CONNECTION                     1
+#define BLE_STATE_ADVERTISING                     (1<<0) 
+#define BLE_STATE_CONNECTED                       (1<<1)
+#define MAX_BUF_LEN                               128 
 
-#define BLE_STATE_CONNECTED       (1<<1)
-
-#define DEVNAME_LEN 8        /**< Device name length (incl term null). */
+/**< Device name length (incl term null). */
+#define DEVNAME_LEN                                8        
+extern char boot_message[MAX_BUF_LEN];
 
 /**************************************************************************//**
  * User-defined types & functions.
