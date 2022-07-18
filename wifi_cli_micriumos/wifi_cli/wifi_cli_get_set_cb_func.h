@@ -32,9 +32,8 @@
 #include "wifi_cli_params.h"
 #include "app_wifi_events.h"
 #include "sl_wfx_secure_link.h"
-
-//Dz
 #include "lwip/tcp.h"
+
 /* Global wifi context */
 extern sl_wfx_context_t   wifi;
 
@@ -48,10 +47,6 @@ void reset_host_cpu(sl_cli_command_arg_t *args);
 
 void tcp_client_send(sl_cli_command_arg_t *args);
 void tcp_client_stop(sl_cli_command_arg_t *args);
-
-sl_status_t tcp_send_msg(char* ip_str);
-err_t tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
-err_t tcp_client_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
 
 /***************************************************************************//**
  * @brief TCP server commands

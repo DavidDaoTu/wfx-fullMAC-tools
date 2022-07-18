@@ -85,23 +85,11 @@ error:
 void tcp_server_stop(sl_cli_command_arg_t *args) 
 {
   PP_UNUSED_PARAM(args);
-  RTOS_ERR tmr_stop_err;
 
   if (g_tcp_srv_state != NULL) {
-      if (g_tcp_srv_state->state == SRV_ACCEPTED ) {
-
-          g_tcp_srv_state->state = SRV_CLOSING;
-          OSTmrStop(&g_tcp_srv_state->tcp_tmr,
-                    OS_OPT_TMR_CALLBACK,
-                    NULL,
-                    &tmr_stop_err);
-          if (tmr_stop_err.Code != RTOS_ERR_NONE) {
-              printf("Failed to stop timer\r\n");
-          }
-      }
       close_tcp(&g_tcp_srv_state);
   } else {
-      printf("Already stopped!\r\n");
+      printf("TCP server already stopped!\r\n");
   }
 }
 
@@ -136,6 +124,7 @@ void tcp_client_send(sl_cli_command_arg_t *args)
         printf("Failed to convert string (%s) to IP \r\n", ip_str);
         return;
     }
+    g_tcp_client_state->state = CLIENT_NONE;
     g_tcp_client_state->remote_port = sl_cli_get_argument_uint16(args, 1);
     g_tcp_client_state->msg_size = sl_cli_get_argument_uint16(args, 2);
     g_tcp_client_state->interval = sl_cli_get_argument_uint32(args, 3);
@@ -167,23 +156,12 @@ invalid_arg_err:
  *****************************************************************************/
 void tcp_client_stop(sl_cli_command_arg_t *args) 
 {
-  PP_UNUSED_PARAM(args);
-  RTOS_ERR tmr_stop_err;
+  PP_UNUSED_PARAM(args);  
 
   if (g_tcp_client_state != NULL) {
-      if (OSTmrStateGet(&g_tcp_client_state->tcp_tmr, 
-                        &tmr_stop_err) == OS_TMR_STATE_RUNNING) {
-          OSTmrStop(&g_tcp_client_state->tcp_tmr,
-                    OS_OPT_TMR_NONE,
-                    NULL,
-                    &tmr_stop_err);
-          if (tmr_stop_err.Code != RTOS_ERR_NONE) {
-              printf("Failed to stop timer\r\n");
-          }
-      }
       close_tcp(&g_tcp_client_state);
   } else {
-      printf("Already stopped!\r\n");
+      printf("TCP client already stopped!\r\n");
   }
 }
 /***************************************************************************//**

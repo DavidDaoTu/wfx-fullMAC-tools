@@ -68,13 +68,26 @@ extern "C" {
 #endif
 
 /* TCP server states */
-enum tcp_erver_states
+enum tcp_server_states
 {
   SRV_NONE = 0,
   SRV_ACCEPTED,
-  SRV_RECEIVED,
-  SRV_CLOSING
+  SRV_RECEIVED
 };
+/* TCP client states */
+enum tcp_client_states
+{
+  CLIENT_NONE = 0,
+  CLIENT_CONNECTED
+};
+
+typedef enum tcp_conn_closing_reasons_e
+{
+  SRV_STOPPED = 0,
+  SRV_DISCONNECTED,
+  CONNECTION_ERROR,
+  CONNECTION_CLOSED
+} tcp_conn_closing_reasons;
 
 typedef struct _tcp_state {
   struct tcp_pcb *server_pcb; // Not used for client mode

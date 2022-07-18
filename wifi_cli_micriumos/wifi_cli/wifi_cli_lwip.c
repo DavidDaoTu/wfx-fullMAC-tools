@@ -28,7 +28,7 @@
 #include "dhcp_server.h"
 #include "sl_wfx_task.h"
 #include "sl_wfx_host.h"
-
+#include "wifi_cli_get_set_cb_func.h"
 /*******************************************************************************
  ******************   Wi-Fi CLI lwIP App Task Configuration   *****************
  ******************************************************************************/
@@ -72,10 +72,14 @@ static void tcp_send_tmr_cb (void  *p_tmr, void  *p_arg);
 
 static void tcp_srv_timer_cb(void *timer, void *data);
 static err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len);
+static err_t tcp_client_recv_cb(void *arg, struct tcp_pcb *tpcb,
+                                struct pbuf *p, err_t err);
 static RTOS_ERR create_tcp_timer(tcp_state_t *state);
-static void tcp_srv_err_cb(void *arg, err_t err);
+static void tcp_conn_err_cb(void *arg, err_t err);
 static err_t tcp_srv_recv_cb(void *arg, struct tcp_pcb *tpcb,
                              struct pbuf *p, err_t err);
+static err_t close_tcp_conn(tcp_state_t *s, tcp_conn_closing_reasons reason);
+
 /**************************************************************************//**
  * @brief start TCP server
  *****************************************************************************/
@@ -141,26 +145,23 @@ void tcp_srv_timer_cb(void *timer, void *data)
   tcp_state_t *s;
   s = (tcp_state_t *)data;
   err_t wr_err = ERR_MEM;
-  
-  while ((wr_err == ERR_MEM) &&
-        (s->p_send_buf != NULL) &&
-        s->state != SRV_CLOSING)
-  {
-    wr_err = tcp_write(s->conn_pcb, s->p_send_buf,
-                      s->msg_size, TCP_WRITE_FLAG_COPY);
 
-    if (wr_err == ERR_MEM) {
-      /* we are low on memory, try later / harder, defer to poll */
-      printf("ERR_MEM\r\n");
-    } else {
-      wr_err = tcp_output(s->conn_pcb);
-      if (wr_err != ERR_OK) {
-          printf("tcp_output error\r\n");
-      } else {
-        s->time_started = sys_now();
-      }
+    /* Just normal sending */
+    if (s->msg_size < tcp_sndbuf(s->conn_pcb)) {
+        wr_err = tcp_write(s->conn_pcb, s->p_send_buf,
+                          s->msg_size, TCP_WRITE_FLAG_COPY);
+        if (wr_err == ERR_MEM) {
+              /* we are low on memory, try later / harder, defer to poll */
+              printf("tcp_write failed: ERR_MEM!\r\n");
+        } else {
+            wr_err = tcp_output(s->conn_pcb);
+            if (wr_err != ERR_OK) {
+                printf("tcp_output error\r\n");
+            } else {
+              s->time_started = sys_now();
+            }
+        }
     }
-  }
 }
 
 /**************************************************************************//**
@@ -187,7 +188,7 @@ err_t tcp_srv_accepted_cb(void *arg, struct tcp_pcb *newpcb, err_t err)
   tcp_arg(newpcb, s);
   tcp_recv(newpcb, tcp_srv_recv_cb);
   tcp_sent(newpcb, tcp_sent_cb);
-  tcp_err(s->conn_pcb, tcp_srv_err_cb); // handles disconnected client
+  tcp_err(s->conn_pcb, tcp_conn_err_cb); // handles disconnected client
 
   // Start timer
   s->tcp_tmr_cb = tcp_srv_timer_cb;
@@ -195,52 +196,133 @@ err_t tcp_srv_accepted_cb(void *arg, struct tcp_pcb *newpcb, err_t err)
   return ERR_OK;
 }
 
-void tcp_srv_err_cb(void *arg, err_t err) {
-
-  tcp_state_t *s;
-  s = (tcp_state_t *)arg;
+err_t close_tcp_conn(tcp_state_t *s, tcp_conn_closing_reasons reason)
+{
+  err_t ret = ERR_OK;
   RTOS_ERR tmr_stop_err;
 
-  printf("Closing the tcp client connection\r\n");
-
-  if (s->conn_pcb != NULL) {
-    tcp_arg(s->conn_pcb, NULL);
-    tcp_poll(s->conn_pcb, NULL, 0);
-    tcp_sent(s->conn_pcb, NULL);
-    tcp_recv(s->conn_pcb, NULL);
-    tcp_err(s->conn_pcb, NULL);
-    err = tcp_close(s->conn_pcb);
-    if (err != ERR_OK) {
-      /* don't want to wait for free memory here... */
-      tcp_abort(s->conn_pcb);
-    }
-  }
-
-  if (s->state == SRV_ACCEPTED ) {
-
-      s->state = SRV_NONE;
-      OSTmrStop(&s->tcp_tmr,
-                OS_OPT_TMR_CALLBACK,
-                NULL,
-                &tmr_stop_err);
-      if (tmr_stop_err.Code != RTOS_ERR_NONE) {
-          printf("Failed to stop timer\r\n");
+  switch (reason)
+  {
+    case CONNECTION_ERROR:
+    case CONNECTION_CLOSED:
+      // The same logic when server error & the client want to disconnect
+      // Intended fall-through
+      /* Stop TCP server timer or client timer */
+      if ((s->state == SRV_ACCEPTED) ||
+          (s->state == SRV_RECEIVED) ||
+          (s->state == CLIENT_CONNECTED))
+      {        
+        OSTmrStop(&s->tcp_tmr,
+                  OS_OPT_TMR_CALLBACK,
+                  NULL,
+                  &tmr_stop_err);
+        if (tmr_stop_err.Code != RTOS_ERR_NONE)
+        {
+            printf("Failed to stop timer\r\n");
+        }
       }
-  }
 
+      /* Close the tcp connection first */
+      if (s->conn_pcb != NULL)
+      {
+        tcp_arg(s->conn_pcb, NULL);
+        tcp_poll(s->conn_pcb, NULL, 0);
+        tcp_sent(s->conn_pcb, NULL);
+        tcp_recv(s->conn_pcb, NULL);
+        tcp_err(s->conn_pcb, NULL);
+        ret = tcp_close(s->conn_pcb);
+        if (ret != ERR_OK) {
+          /* don't want to wait for free memory here... */
+          tcp_abort(s->conn_pcb);
+        }
+        s->conn_pcb = NULL;
+        printf("TCP connection stopped!\r\n");
+        
+        if (s->state == CLIENT_CONNECTED) {
+          s->state = CLIENT_NONE;
+        } else {
+          s->state = SRV_NONE;
+        }
+      }
+
+      break;
+
+    case SRV_STOPPED:
+        if (s->server_pcb != NULL)
+        {
+          tcp_arg(s->server_pcb, NULL);
+          tcp_accept(s->server_pcb, NULL);
+
+          ret = tcp_close(s->server_pcb);
+          if (ret != ERR_OK) {
+            /* don't want to wait for free memory here... */
+            tcp_abort(s->server_pcb);
+          }
+          s->server_pcb = NULL;
+          printf("\r\n TCP server stopped!\r\n");
+        }
+      break;
+
+    default:
+      break;
+  }
+  return ret;
+}
+
+void tcp_conn_err_cb(void *arg, err_t err) 
+{
+  printf("Connection error\r\n");
+  close_tcp_conn((tcp_state_t *)arg, CONNECTION_ERROR);
 }
 
 
 err_t tcp_srv_recv_cb(void *arg, struct tcp_pcb *tpcb,
                       struct pbuf *p, err_t err)
 {
+  PP_UNUSED_PARAM(tpcb);
+  err_t ret;
+
   if (p == NULL) {
-     printf("Client is disconnected\r\n");
-     tcp_srv_err_cb(arg, err);
+     printf("Disconnected from the client!\r\n");
+     close_tcp_conn((tcp_state_t *)arg, CONNECTION_CLOSED);
+     ret = ERR_OK;
   }
-  return ERR_OK;
+  else if (err != ERR_OK) {
+      pbuf_free(p);
+      ret = err;
+  }
+  else {
+      /* Some other logic */
+      ret = ERR_OK;
+  }
+  return ret;
 }
 
+err_t tcp_client_recv_cb(void *arg, struct tcp_pcb *tpcb,
+                                struct pbuf *p, err_t err)
+{
+
+  PP_UNUSED_PARAM(tpcb);
+  err_t ret;
+  RTOS_ERR tmr_stop_err;
+  tcp_state_t *s = (tcp_state_t*) arg;
+
+  if (p == NULL) {
+     printf("Disconnected from the TCP server!\r\n");
+     tcp_client_stop(NULL);
+     ret = ERR_OK;
+  }
+  else if (err != ERR_OK) {
+      pbuf_free(p);
+      ret = err;
+  }
+  else {
+      /* Some other logic */
+      ret = ERR_OK;
+  }
+
+  return ret;
+}
 /**************************************************************************//**
  * @brief allocate the sending message string based on the msg_size
  *****************************************************************************/
@@ -258,7 +340,7 @@ void* allocate_sending_msg(u16_t msg_sz)
       }
       *p_char++ = '\r';
       *p_char++ = '\n';
-      *p_char   = '\0';     // NULL string
+      *p_char   = '\0';     // NULL-terminated string
   }
   return msg_buf;
 }
@@ -278,7 +360,7 @@ err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
 }
 
 /**************************************************************************//**
- * @brief Called after connected to the remot server. Start timer for sending
+ * @brief Called after connected to the remote server. Start timer for sending
  *****************************************************************************/
 err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err) 
 {
@@ -288,9 +370,10 @@ err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
   RTOS_ERR tmr_err;
 
   s = (tcp_state_t *)arg;
-  printf("\r\nSuccessfully connected! \r\n");
+  printf("\r\n TCP client successfully connected! \r\n");
 
-  // start timer
+  s->state = CLIENT_CONNECTED;
+  // start client timer
   tmr_err = create_tcp_timer(s);
   if (tmr_err.Code != RTOS_ERR_NONE ) {
       printf("Failed to start TCP client sending timer\r\n");
@@ -304,39 +387,17 @@ err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
  *****************************************************************************/
 void close_tcp(tcp_state_t **state) 
 {
-  err_t err;
   tcp_state_t *s;
 
   s = *state;
   if (s == NULL) {
-      printf("Already close TCP\r\n");
+      printf("TCP connection already closed \r\n");
       return;
   }
 
-  if (s->conn_pcb != NULL) {
-    tcp_arg(s->conn_pcb, NULL);
-    tcp_sent(s->conn_pcb, NULL);
+  close_tcp_conn(s, CONNECTION_CLOSED);
 
-    err = tcp_close(s->conn_pcb);
-    if (err != ERR_OK) {
-      /* don't want to wait for free memory here... */
-      tcp_abort(s->conn_pcb);
-    }
-    s->conn_pcb = NULL;
-    printf("Connection stopped!\r\n");
-  }
-
-  if (s->server_pcb != NULL) {
-    tcp_arg(s->server_pcb, NULL);
-    tcp_accept(s->server_pcb, NULL);
-
-    err = tcp_close(s->server_pcb);
-    if (err != ERR_OK) {
-      /* don't want to wait for free memory here... */
-      tcp_abort(s->server_pcb);
-    }
-    printf("\r\n TCP server stopped!\r\n");
-  }
+  close_tcp_conn(s, SRV_STOPPED);
 
   s->interval = 0;
   s->msg_size = 0;
@@ -373,12 +434,14 @@ err_t tcp_client_send_msg(tcp_state_t *state)
 
   tcp_arg(tpcb, (void *)state);
   tcp_sent(tpcb, tcp_sent_cb);
+  /* initialize LwIP tcp_recv callback function */
+  tcp_recv(tpcb, tcp_client_recv_cb);
 
   err = tcp_connect(tpcb, &state->remote_addr,
                     state->remote_port, tcp_client_connected);
 
   if (err != ERR_OK) {
-      printf("Failed to connect to remote server!\r\n");
+      printf("Failed to connect to the remote server!\r\n");
   }
   return err;
 }
@@ -392,22 +455,22 @@ void tcp_send_tmr_cb (void  *p_tmr, void  *p_arg) {
   err_t err;
   tcp_state_t *s = (tcp_state_t *)p_arg;
 
-  s->time_started = sys_now();
 
-  /// TODO: Improve the way to write with while loop
-  err = tcp_write(s->conn_pcb,
-                  (const void*) s->p_send_buf,
-                  s->msg_size,
-                  TCP_WRITE_FLAG_COPY);
+  if (s->msg_size <= tcp_sndbuf(s->conn_pcb)) {
+      err = tcp_write(s->conn_pcb,
+                      (const void*) s->p_send_buf,
+                      s->msg_size,
+                      TCP_WRITE_FLAG_COPY);
 
-  if (err == ERR_OK) {
-      err = tcp_output(s->conn_pcb);
-      if (err != ERR_OK) {
-          printf("tcp_output error\r\n");          
-      }
-      s->time_started = sys_now();
-  } else {
-      printf("write_err = %d\r\n", err);
+        if (err == ERR_OK) {
+            err = tcp_output(s->conn_pcb);
+            if (err != ERR_OK) {
+                printf("tcp_output error\r\n");
+            }
+            s->time_started = sys_now();
+        } else {
+            printf("write_err = %d\r\n", err);
+        }
   }
 }
 
