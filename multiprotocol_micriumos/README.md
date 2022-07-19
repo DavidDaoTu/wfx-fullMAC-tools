@@ -3,7 +3,7 @@
 The purpose of this application is to provide a Micrium OS example using multiple protocols to do something as simple as toggling LEDs.
 
 BLE and Wi-Fi protocols are used in this example to communicate with it, **neither the Dynamic Multiprotocol feature (DMP) nor a coexistence mechanism are used**.
-The BLE interface is used to send advertisements/beacons allowing to connect to the device and toggle the LEDs via the Wireless Gecko application.
+The BLE interface is used to send advertisements/beacons allowing to connect to the device and toggle the LEDs via the EFR Connect BLE Mobile App.
 A Wi-Fi SoftAP interface is also provided by the device allowing to connect and access a Web Page and toggle the LEDs from it for instance.
 
 ## Requirements
@@ -24,9 +24,9 @@ Additionally, this example requires:
 
 ### Software Prerequisites
 
-* The required software includes Simplicity Studio, the Gecko SDK Suite (32-bit MCU and lwIP) and the Bluetooth SDK
+* The required software includes Simplicity Studio v5, the Gecko SDK Suite (32-bit MCU and lwIP) and the Bluetooth SDK
 * The example projects available in this repository
-* The **Wireless Gecko** application available on [**Google Play**](https://play.google.com/store/apps/details?id=com.siliconlabs.wirelessgecko) and [**App Store**](https://apps.apple.com/us/app/wireless-gecko/id1315784335)
+* The **EFR Connect BLE Mobile App** available on [**Google Play**](https://play.google.com/store/apps/details?id=com.siliconlabs.bledemo&hl=en&gl=US) and [**App Store**](https://apps.apple.com/us/app/efr-connect-ble-mobile-app/id1030932759)
 * A Serial terminal to communicate with the board. For example, [**Tera Term**](https://osdn.net/projects/ttssh2/releases/) or [**Putty**](https://www.putty.org/)
 * A Web browser 
 
@@ -42,7 +42,7 @@ Please follow the instructions related to the platform suiting your case:
 1. Once the binary file transferred, the example starts sending BLE advertisements/beacons, launches a SoftAP interface named _**multiprotocol_softap**_
 and displays the LED and the interface connection states on the LCD screen of the board (except for EFR32xG21 devices)
 2. Enable the Bluetooth on your smartphone
-3. Launch the Wireless Gecko application and start the **Connected Lighting Demo**
+3. Launch the EFR Connect BLE Mobile App and start the **Connected Lighting Demo** under the **Demo** view.
 4. Select your BLE platform from the list of detected devices, it should be named **MPxxxx**.
 If several devices are displayed, the two last bytes of the BLE MAC address, composing the BLE name, can be retrieved from the log traces displayed at boot
 5. Your smartphone is now connected to the device using the Bluetooth interface.
@@ -53,14 +53,13 @@ The LED state is also toggled on the LCD screen and an arrow appears shortly nex
 8. Connect to the Access Point _**multiprotocol_softap**_ provided by the device, with the password **changeme**.
 9. Open a Web browser on your smartphone and go to [http://10.10.0.1/](http://10.10.0.1/). If a popup appears due to a lack of Internet connectivity on the Wi-Fi interface
 make sure to request to stay connected, otherwise the Web page may not be displayed in your browser. 
-10. The displayed Web page gives the possibility to toggle the LEDs as the Wireless Gecko application, and it also gives more like:
+1.  The displayed Web page not only gives the possibility to toggle the LEDs as the EFR Connect BLE Mobile App but it also gives more like:
     * Shutdown an active BLE connection
     * Enable/disable the BLE advertisements
-    * Shutdown active connections with the Wi-Fi Softap
-    * Enable/Disable the Wi-Fi Softap interface
+    * Shutdown active connections to the Wi-Fi Softap
+    * Disable the Wi-Fi Softap interface
     * Scan and connect to Access Points surrounding the device
     * Display various information about the BLE and Wi-Fi interfaces and their connections
-11. LEDs can also be toggled from the push button PB0 on the board (except for EFR32xG21 devices)
+2.  LEDs can also be toggled from the push buttons PB0 & PB1 respectively on the board (except for EFR32xG21 devices)
 
-This example is actually a combination of two already existing examples, for more information about the Wireless Gecko interactions, please refer to the [DMP Light Demo](https://www.silabs.com/documents/public/quick-start-guides/qsg155-dynamic-multiprotocol-demo-quick-start-guide.pdf) and
-and for more information about the Web page interactions, please refer to the [Wi-Fi commissioning example](https://docs.silabs.com/wifi/wf200/content-source/getting-started/silabs/ssv4/gg11/wifi-commissioning-micriumos/interacting-with-the-example).
+This example is actually a combination of two already existing examples, for more information about the EFR Connect BLE Mobile App interactions, please refer to the [DMP Light Demo](https://docs.silabs.com/bluetooth/3.2/miscellaneous/mobile/efr-connect-mobile-app) and for more information about the Web page interactions, please refer to the [Wi-Fi commissioning example](https://docs.silabs.com/wifi/wf200/content-source/getting-started/silabs/ssv5/wgm160p/wifi-commissioning-micriumos/interacting-with-the-example).
