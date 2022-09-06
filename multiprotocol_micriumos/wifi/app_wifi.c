@@ -25,8 +25,10 @@
 #include "common.h"
 #include "em_common.h"
 #include "sl_simple_led_instances.h"
+#ifdef SL_CATALOG_SIMPLE_BUTTON_PRESENT
 #include "sl_simple_button_instances.h"
 #include "sl_simple_button_config.h"
+#endif
 #include "app_webpage.h"
 #include "app_wifi_events.h"
 #include "app_wifi.h"
@@ -40,6 +42,7 @@ static CPU_STK start_app_task_stk[START_APP_TASK_STK_SIZE];
 static OS_TCB  start_app_task_tcb;
 static void    start_app_task(void *p_arg);
 
+#ifdef SL_CATALOG_SIMPLE_BUTTON_PRESENT
 void sl_button_on_change(const sl_button_t *handle)
 {
   if ((handle == &sl_button_btn0)
@@ -50,7 +53,7 @@ void sl_button_on_change(const sl_button_t *handle)
     sl_led_toggle(&sl_led_led1);
   }
 }
-
+#endif
 static void start_app_task(void *p_arg)
 {
   RTOS_ERR  err;

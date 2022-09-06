@@ -33,7 +33,7 @@ static interface_light_trigger_src_t led_trigger_source = interface_light_trigge
 static interface_mac_t mac_trigger = {0};
 static interface_mac_t own_mac = {0};
 
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
 // Timer for clearing direction arrows
 static sl_sleeptimer_timer_handle_t clear_direction_timer;
 static uint32_t clear_direction_delay_ticks = 0;
@@ -74,7 +74,7 @@ static void apply_light_change (interface_light_trigger_src_t trigger,
                                 interface_mac_t *mac,
                                 uint8_t new_state)
 {
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
   sl_status_t status;
   // Update the LCD
   mpUIDisplayLight(new_state);
@@ -261,7 +261,7 @@ void interface_light_get_mac_trigger(interface_mac_t *mac)
 void interface_display_ble_state(bool connected)
 {
 
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
   mpUIDisplayProtocol(MP_UI_PROTOCOL2, connected);
 #endif
 
@@ -276,7 +276,7 @@ void interface_display_ble_state(bool connected)
 void interface_display_wifi_state(bool connected)
 {
 
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
   mpUIDisplayProtocol(MP_UI_PROTOCOL1, connected);
 #endif
 
@@ -295,7 +295,7 @@ void interface_display_ble_id(uint8_t *id)
   // Only 5 characters are displayed correctly
   sprintf(dev_id, "    %02X%02X", id[1], id[0]);
 
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
   mpUIDisplayId(MP_UI_PROTOCOL2, (uint8_t *)dev_id);
 #endif
 
@@ -313,7 +313,7 @@ void interface_display_ble_id(uint8_t *id)
  ******************************************************************************/
 void interface_display_wifi_id(uint8_t *id)
 {
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
   mpUIDisplayId(MP_UI_PROTOCOL1, id);
 #endif
 }
@@ -326,7 +326,7 @@ void interface_display_wifi_id(uint8_t *id)
  ******************************************************************************/
 void interface_init(void)
 {
-#if !BRD4187X || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
   // Timer for clearing direction arrows on LCD
   sl_sleeptimer_init();
 

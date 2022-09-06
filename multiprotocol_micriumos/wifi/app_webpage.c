@@ -31,8 +31,9 @@
 #include "string.h"
 
 #include "sl_simple_led_instances.h"
+#ifdef SL_CATALOG_SIMPLE_BUTTON_PRESENT
 #include "sl_simple_button_instances.h"
-
+#endif
 #include "ethernetif.h"
 #include "lwip/netif.h"
 #include "lwip/tcpip.h"

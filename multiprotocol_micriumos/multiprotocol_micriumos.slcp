@@ -18,10 +18,7 @@ component:
   - id: bluetooth_feature_system
   - id: bluetooth_feature_scanner
   - id: component_catalog  
-  - id: rail_util_pti
-  - id: mpu
-  - id: simple_button
-    instance: [btn0, btn1]
+  - id: mpu    
   - id: simple_led
     instance: [led0, led1]
   - id: dmadrv
@@ -31,8 +28,7 @@ component:
   - id: device_init
   - id: device_init_clocks
   - id: sl_system
-  - id: sl_system_init
-  - id: micriumos_bsp
+  - id: sl_system_init  
   - id: micriumos_kernel
   - id: micriumos_common_lib
   - id: micriumos_io_core  
@@ -42,9 +38,17 @@ component:
   - id: lwip_api
   - id: lwip_netif_ethernet
   - id: lwip_app_http
-  - id: wfx_secure_link
+
+provides:
+  - name: device_init_dcdc
+    condition: [brd4180a]
 
 requires:
+  - name: simple_button
+    unless: [brd4180a]
+    instance: [btn0, btn1]
+  - name: rail_util_pti
+    unless: [brd4180a]
   - name: app_log    
     unless: 
       - brd4187a
@@ -75,11 +79,13 @@ requires:
       - brd4187a
       - brd4187b
       - brd4187c
+      - brd4180a
   - name: dmd_memlcd
     unless: 
       - brd4187a
       - brd4187b
       - brd4187c
+      - brd4180a  
 source:
   - path: main.c
   - path: app.c

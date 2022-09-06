@@ -30,6 +30,9 @@
 #define BRD4187X (defined(EFR32MG24B020F1536IM48)     \
                   || defined(EFR32MG24A020F1536GM48)  \ 
                   || defined(EFR32MG24B220F1536IM48))
+
+#define BRD4180_81_X (defined(EFR32MG21A020F1024IM32) \
+                      || defined(EFR32MG21A010F1024IM32))
                   
 typedef bd_addr interface_mac_t;
 
