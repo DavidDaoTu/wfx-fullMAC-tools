@@ -52,6 +52,12 @@ component:
   - id: wfx_fmac_driver
   - id: sleeptimer
   - id: mbedtls_ecdsa_deterministic
+  - id: mbedtls_ecc_curve25519
+  - id: mbedtls_random
+  - id: mbedtls_ccm
+  - id: mbedtls_hash
+  - id: mbedtls_ecdh
+  - id: mbedtls_sha512
 source:
   - path: main.c
   - path: app.c
