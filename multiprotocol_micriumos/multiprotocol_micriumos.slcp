@@ -54,11 +54,13 @@ requires:
       - brd4187a
       - brd4187b
       - brd4187c
+      - brd4180a
   - name: app_assert
     unless:
       - brd4187a
       - brd4187b
       - brd4187c
+      - brd4180a
   - name: iostream_recommended_stream
     unless: 
       - brd4187a
@@ -106,6 +108,7 @@ source:
     folder: lwip_host/apps
   - path: LCD/mp-ui.c
     folder: LCD
+    unless: [brd4180a]
 include:
   - path: .
     file_list:
@@ -118,6 +121,7 @@ include:
     file_list:
       - path: mp-ui.h
       - path: mp-bitmaps.h
+    unless: [brd4180a]
   - path: wifi
     file_list:
       - path: app_wifi_events.h
@@ -158,13 +162,13 @@ configuration:
   - name: SL_STACK_SIZE
     value: 2752
   - name: SL_HEAP_SIZE
-    value: 9200
+    value: 2048
   - name: SL_IOSTREAM_USART_VCOM_FLOW_CONTROL_TYPE
     value: usartHwFlowControlNone
   - name: SL_IOSTREAM_USART_VCOM_CONVERT_BY_DEFAULT_LF_TO_CRLF
     value: 1
   - name: LIB_MEM_CFG_HEAP_SIZE
-    value: 32000
+    value: 2048
   - name: SL_BOARD_ENABLE_VCOM
     value: 1
   - name: OS_CFG_TS_EN

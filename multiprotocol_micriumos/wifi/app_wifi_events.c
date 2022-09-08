@@ -34,7 +34,7 @@
 
 // Event Task Configurations
 #define WFX_EVENTS_TASK_PRIO              21u
-#define WFX_EVENTS_TASK_STK_SIZE        1024u
+#define WFX_EVENTS_TASK_STK_SIZE          800u
 #define WFX_EVENTS_NB_MAX                 10u
 
 void sl_wfx_connect_callback(sl_wfx_connect_ind_t *connect);

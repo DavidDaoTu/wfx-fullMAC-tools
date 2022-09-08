@@ -32,7 +32,11 @@
 #define MEM_ALIGNMENT           4
 
 /* the size of the heap memory.  */
+#if defined(EFR32MG21A020F1024IM32) || defined(EFR32MG21A010F1024IM32)
+#define MEM_SIZE                (10 * 1024)
+#else
 #define MEM_SIZE                (20 * 1024)
+#endif
 
 /* the number of memp struct pbufs. */
 #define MEMP_NUM_PBUF           10
@@ -49,7 +53,11 @@
 
 // pbuf options
 /* the number of buffers in the pbuf pool. */
+#if defined(EFR32MG21A020F1024IM32) || defined(EFR32MG21A010F1024IM32)
+#define PBUF_POOL_SIZE          8
+#else
 #define PBUF_POOL_SIZE          10
+#endif
 
 /* the size of each pbuf in the pbuf pool. */
 #define PBUF_POOL_BUFSIZE       1582

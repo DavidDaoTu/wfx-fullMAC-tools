@@ -26,7 +26,7 @@
 #include "app.h"
 #include "app_bluetooth.h"
 
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
 #include "app_assert.h"
 #endif
 char boot_message[MAX_BUF_LEN];
@@ -275,7 +275,7 @@ void bluetooth_app_start_advertising(void)
                               is_connectable ?
                               sl_bt_advertiser_connectable_scannable :
                               sl_bt_advertiser_scannable_non_connectable);
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
   app_assert_status(sc);
 #endif
 
@@ -296,7 +296,7 @@ void bluetooth_app_stop_advertising(void)
   sl_status_t sc;
 
   sc = sl_bt_advertiser_stop(advertising_set_handle);
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
   app_assert_status(sc);  
 #endif
 
@@ -396,7 +396,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
       // Extract unique ID from BT Address.
       sc = sl_bt_system_get_identity_address(&address, &address_type);
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
       app_assert_status(sc);
 #endif
 
@@ -414,7 +414,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
                                                    0,
                                                    sizeof(system_id),
                                                    system_id);
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
       app_assert_status(sc);
 #endif
 
@@ -430,7 +430,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
       // Create an advertising set.
       sc = sl_bt_advertiser_create_set(&advertising_set_handle);
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
       app_assert_status(sc);
 #endif
 
@@ -439,7 +439,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
                                               0,
                                               strlen(ble_own_name),
                                               (const uint8_t *)ble_own_name);
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
       app_assert_status(sc);
 #endif
 
@@ -450,7 +450,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
                               160, // max. adv. interval (milliseconds * 1.6)
                               0,   // adv. duration
                               0);  // max. num. adv. events
-#if !BRD4187X
+#if !(BRD4187X || BRD4180_81_X)
       app_assert_status(sc);
 #endif
       

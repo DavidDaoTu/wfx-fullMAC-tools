@@ -136,16 +136,15 @@ static OS_TCB webpage_start_task_tcb;
 char wlan_ssid[32 + 1] = WLAN_SSID_DEFAULT;
 char wlan_passkey[64 + 1] = WLAN_PASSKEY_DEFAULT;
 sl_wfx_security_mode_t wlan_security = WLAN_SECURITY_DEFAULT;
-char wlan_pmk[64] = "0";
+
 char softap_ssid[32 + 1] = SOFTAP_SSID_DEFAULT;
 char softap_passkey[64 + 1] = SOFTAP_PASSKEY_DEFAULT;
 sl_wfx_security_mode_t softap_security = SOFTAP_SECURITY_DEFAULT;
-char softap_pmk[64] = "0";
+
 uint8_t softap_channel = SOFTAP_CHANNEL_DEFAULT;
 sl_wfx_mac_address_t client_mac_address = { { 0, 0, 0, 0, 0, 0 } };
 
-/// Memory to store WiFi scan results from web server.
-static char string_list[4096];
+
 /// Memory to store an event to display in the web page
 char event_log[50];
 /// AP channel

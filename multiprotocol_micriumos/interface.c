@@ -22,11 +22,12 @@
 #include <stdio.h>
 #include "interface.h"
 #include "sl_simple_led_instances.h"
-#include "mp-ui.h"
 #include "sl_simple_timer.h"
 #include "app_bluetooth.h"
-
+#if !(BRD4187X || BRD4180_81_X) || defined(SL_CATALOG_DMD_MEMLCD_PRESENT)
+#include "mp-ui.h"
 #define CLEAR_DIRECTION_DELAY_MSEC        500
+#endif
 
 static uint8_t led_state = 0;
 static interface_light_trigger_src_t led_trigger_source = interface_light_trigger_src_button;
