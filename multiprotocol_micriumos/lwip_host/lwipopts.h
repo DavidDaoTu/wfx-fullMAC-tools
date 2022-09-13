@@ -31,19 +31,37 @@
 /* Memory options */
 #define MEM_ALIGNMENT           4
 
-/* the size of the heap memory.  */
 #if defined(EFR32MG21A020F1024IM32) || defined(EFR32MG21A010F1024IM32)
-#define MEM_SIZE                (10 * 1024)
+/* the size of the heap memory.  */
+#define MEM_SIZE                (5 * 1024)
+/* the number of memp struct pbufs. */
+#define MEMP_NUM_PBUF           6
+/* the number of simultaneously active TCP connections. */
+#define MEMP_NUM_TCP_PCB        4
+/* the number of buffers in the pbuf pool. */
+#define PBUF_POOL_SIZE          6
+/* TCP sender buffer space (bytes). */
+#define TCP_SND_BUF             (6 * TCP_MSS)
+/* TCP receive window. */
+#define TCP_WND                 (6 * TCP_MSS)
 #else
+/* the size of the heap memory.  */
 #define MEM_SIZE                (20 * 1024)
-#endif
-
 /* the number of memp struct pbufs. */
 #define MEMP_NUM_PBUF           10
-/* the number of UDP protocol control blocks. One per active UDP "connection". */
-#define MEMP_NUM_UDP_PCB        6
 /* the number of simultaneously active TCP connections. */
 #define MEMP_NUM_TCP_PCB        10
+/* the number of buffers in the pbuf pool. */
+#define PBUF_POOL_SIZE          10
+/* TCP sender buffer space (bytes). */
+#define TCP_SND_BUF             (8 * TCP_MSS)
+/* TCP receive window. */
+#define TCP_WND                 (8 * TCP_MSS)
+#endif
+
+
+/* the number of UDP protocol control blocks. One per active UDP "connection". */
+#define MEMP_NUM_UDP_PCB        6
 /* the number of listening TCP connections. */
 #define MEMP_NUM_TCP_PCB_LISTEN 5
 /* the number of simultaneously queued TCP segments. */
@@ -52,13 +70,6 @@
 #define MEMP_NUM_SYS_TIMEOUT    10
 
 // pbuf options
-/* the number of buffers in the pbuf pool. */
-#if defined(EFR32MG21A020F1024IM32) || defined(EFR32MG21A010F1024IM32)
-#define PBUF_POOL_SIZE          8
-#else
-#define PBUF_POOL_SIZE          10
-#endif
-
 /* the size of each pbuf in the pbuf pool. */
 #define PBUF_POOL_BUFSIZE       1582
 
@@ -73,29 +84,23 @@
 /* TCP Maximum segment size. */
 #define TCP_MSS                 (1500 - 40)
 
-/* TCP sender buffer space (bytes). */
-#define TCP_SND_BUF             (8 * TCP_MSS)
-
 /*  TCP sender buffer space (pbufs). This must be at least
    as much as (2 * TCP_SND_BUF/TCP_MSS) for things to work. */
 #define TCP_SND_QUEUELEN        (2 * TCP_SND_BUF / TCP_MSS)
 
-/* TCP receive window. */
-#define TCP_WND                 (8 * TCP_MSS)
-
 /* ICMP options */
-#define LWIP_ICMP                       1
+#define LWIP_ICMP                     1
 
 /* DHCP options */
-#define LWIP_DHCP               1
+#define LWIP_DHCP                     1
 #define ETHARP_SUPPORT_STATIC_ENTRIES 1
 
 /* UDP options */
-#define LWIP_UDP                1
-#define UDP_TTL                 255
+#define LWIP_UDP                       1
+#define UDP_TTL                        255
 
 /* Statistics options */
-#define LWIP_STATS 0
+#define LWIP_STATS                     0
 
 /* Support a callback function from an interface
  * whenever the link changes (i.e., link down)
@@ -105,7 +110,7 @@
 
 // Checksum options
 
-#define CHECKSUM_BY_HARDWARE 0
+#define CHECKSUM_BY_HARDWARE            0
 
 /* Generate checksums in software for outgoing IP packets.*/
 #define CHECKSUM_GEN_IP                 1

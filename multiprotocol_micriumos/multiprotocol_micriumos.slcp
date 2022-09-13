@@ -71,6 +71,7 @@ requires:
       - brd4187a
       - brd4187b
       - brd4187c
+      - brd4180a
   - name: iostream_retarget_stdio
     unless: 
       - brd4187a
@@ -160,15 +161,15 @@ other_file:
 
 configuration:
   - name: SL_STACK_SIZE
-    value: 2752
+    value: 1024
   - name: SL_HEAP_SIZE
-    value: 2048
+    value: 9200
   - name: SL_IOSTREAM_USART_VCOM_FLOW_CONTROL_TYPE
     value: usartHwFlowControlNone
   - name: SL_IOSTREAM_USART_VCOM_CONVERT_BY_DEFAULT_LF_TO_CRLF
     value: 1
   - name: LIB_MEM_CFG_HEAP_SIZE
-    value: 2048
+    value: 9216
   - name: SL_BOARD_ENABLE_VCOM
     value: 1
   - name: OS_CFG_TS_EN
