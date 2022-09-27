@@ -70,6 +70,7 @@ void get_station_gateway(sl_cli_command_arg_t *args);
 void get_station_ip(sl_cli_command_arg_t *args);
 void get_station_pmk(sl_cli_command_arg_t *args);
 void get_station_mac(sl_cli_command_arg_t *args);
+void get_statistics(sl_cli_command_arg_t *args);
 
 void get_softap_ssid(sl_cli_command_arg_t *args);
 void get_softap_passkey(sl_cli_command_arg_t *args);

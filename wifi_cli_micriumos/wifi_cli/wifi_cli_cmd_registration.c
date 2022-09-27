@@ -136,6 +136,12 @@ static const sl_cli_command_info_t cli_cmd_get_softap_ssid = \
                    "softap.ssid" SL_CLI_UNIT_SEPARATOR,
                    {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
 
+static const sl_cli_command_info_t cli_cmd_get_statistics = \
+    SL_CLI_COMMAND(get_statistics,
+                   "Get the station statistics",
+                   "station.stats" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
+
 static const sl_cli_command_info_t cli_cmd_get_softap_passkey = \
    SL_CLI_COMMAND(get_softap_passkey,
                   "Get SoftAP passkey",
@@ -213,6 +219,7 @@ static const sl_cli_command_entry_t cmd_get_grp_table[] = {
     {"station.ip", &cli_cmd_get_station_ip, false},
     {"station.pmk", &cli_cmd_get_station_pmk, false},
     {"station.mac", &cli_cmd_get_station_mac, false},
+    {"station.stats", &cli_cmd_get_statistics, false},
     {"softap.ssid", &cli_cmd_get_softap_ssid, false},
     {"softap.passkey", &cli_cmd_get_softap_passkey, false},
     {"softap.security", &cli_cmd_get_softap_security, false},

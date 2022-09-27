@@ -947,6 +947,38 @@ void set_mac_key(sl_cli_command_arg_t *args)
 }
 
 /**************************************************************************//**
+ * @brief: Wi-Fi CLI's callback: Get the per-interface statistics.
+ *****************************************************************************/
+void get_statistics(sl_cli_command_arg_t *args)
+{
+  (void)args;
+
+  sl_status_t status;
+  sl_wfx_statistics_t stats;
+
+  if (!(wifi.state & SL_WFX_STA_INTERFACE_CONNECTED)) {
+      printf("Station is not connected to an AP\r\n");
+      return;
+  }
+
+  status = sl_wfx_get_statistics(&stats);
+
+  if (SL_STATUS_OK == status) {
+    printf("beacon_rx_count:            %lu\r\n", stats.beacon_rx_count);
+    printf("beacon_rx_missed_count:     %lu\r\n", stats.beacon_rx_missed_count);
+    printf("beacon_tbtt_diff:           %d\r\n",  stats.beacon_tbtt_diff);
+    printf("unicast_rx_count:           %lu\r\n", stats.unicast_rx_count);
+    printf("unicast_tx_success_count:   %lu\r\n", stats.unicast_tx_success_count);
+    printf("unicast_tx_failure_count:   %lu\r\n", stats.unicast_tx_failure_count);
+    printf("multicast_rx_count:         %lu\r\n", stats.multicast_rx_count);
+    printf("multicast_tx_success_count: %lu\r\n", stats.multicast_tx_success_count);
+    printf("multicast_tx_failure_count: %lu\r\n", stats.multicast_tx_failure_count);
+  } else {
+    printf("Failed to get station statistics\r\n");
+  }
+}
+
+/**************************************************************************//**
  * @brief: Wi-Fi CLI's callback: Reset the host CPU.
  *****************************************************************************/
 void reset_host_cpu(sl_cli_command_arg_t *args)
