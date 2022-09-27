@@ -974,7 +974,7 @@ void get_statistics(sl_cli_command_arg_t *args)
     printf("multicast_tx_success_count: %lu\r\n", stats.multicast_tx_success_count);
     printf("multicast_tx_failure_count: %lu\r\n", stats.multicast_tx_failure_count);
   } else {
-    printf("Failed to get station statistics\r\n");
+    printf("Failed to get station statistics! status = %lu\r\n", status);
   }
 }
 
