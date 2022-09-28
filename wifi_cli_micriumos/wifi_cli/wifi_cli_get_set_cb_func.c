@@ -1886,29 +1886,117 @@ void wifi_save(sl_cli_command_arg_t *args)
                  sizeof(wlan_security));
 }
 
-
-void wifi_wlan_rate_algo(sl_cli_command_arg_t *args){
-  sl_status_t status = -1;
+/**************************************************************************//**
+ * @brief: Wi-Fi CLI's callback: Select TX rate algorithm. 0: AARF, 1: Minstrel
+ *****************************************************************************/
+void wifi_set_rate_algo(sl_cli_command_arg_t *args)
+{
+  sl_status_t status;
   sl_wfx_rate_set_bitmask_t bitmask;
+  uint8_t rate_algo;
+  uint8_t intf;
 
-  uint8_t state = sl_cli_get_argument_uint8(args, 0);
-  memset(&bitmask, 0xFF, sizeof(sl_wfx_rate_set_bitmask_t));
+  rate_algo = (uint8_t)sl_cli_get_argument_uint8(args, 0);
+  intf = (uint8_t)sl_cli_get_argument_uint8(args, 1);
 
-  if (state != 0 && state != 1){
-      printf("Invalid value. Please use 0 for AARF; 1 for minstrel \r\n");
-      return;
+  if ((rate_algo > 1) || (intf > 1)) 
+      goto error;
+
+  // Select all TX rates (b, g, n)
+  memset(&bitmask, 0xFF, sizeof(sl_wfx_rate_set_bitmask_t)); 
+  
+  status = sl_wfx_set_tx_rate_parameters(bitmask, rate_algo, intf ? 
+                                                              SL_WFX_SOFTAP_INTERFACE :
+                                                              SL_WFX_STA_INTERFACE);  
+  
+  if (SL_STATUS_OK == status) {
+    printf("rate_algo set to %s for %s interface\r\n", rate_algo ? "Minstrel": "AARF",
+                                                      intf ? "softap" : "station");
+    return;
   }
 
-  status = sl_wfx_set_tx_rate_parameters(bitmask, state);
+error:
+  printf("Invalid command\r\n");
+  printf("set rate_algo command takes 2 arguments: \r\n"
+          "(1) 0/1 for AARF/Minstrel rate algo; \r\n"
+          "(2) 0/1 for STA/SoftAP\r\n");
+}
 
-  if (status == SL_STATUS_OK) {
-    if (state == 0) {
-      printf("rate algo set to AARF\r\n");
-    } else {
-      printf("rate algo set to minstrel\r\n");
-    }
+/**************************************************************************//**
+ * @brief: Wi-Fi CLI's callback: Set parameters for TX such as: 
+ * rate algorithm, selected tx rates, and STA/SoftAP interface.
+ *****************************************************************************/
+void wifi_set_tx_params(sl_cli_command_arg_t *args)
+{
+  int arg_count;
+  sl_status_t status;
+  sl_wfx_rate_set_bitmask_t bitmask;
+  tx_rates_u tx_rates;
+  uint8_t rate_algo;
+  uint8_t intf;
+  char *rates_str = NULL;
+
+  arg_count =  sl_cli_get_argument_count(args);
+
+  if (arg_count != 3) {
+      printf("The number of arguments must be 3\r\n");
+      goto error;
   }
-  else {
-    printf("Invalid command\r\n");
+
+  rate_algo = (uint8_t)atoi(sl_cli_get_argument_string(args, 0));
+  intf = (uint8_t)atoi(sl_cli_get_argument_string(args, 2));
+  rates_str = sl_cli_get_argument_string(args, 1);
+
+  if (false == is_hex_string(rates_str)) {
+      printf("TX rates should be in hex format (e.g. : 0x2 for b2Mbps)\r\n");
+      goto error;
   }
+
+  if ((rate_algo > 1) || (intf > 1)) 
+      goto error;  
+
+  memset(&bitmask, 0x00, sizeof(sl_wfx_rate_set_bitmask_t));
+  tx_rates.rate = convert_rate_string_to_uint32_t(rates_str);
+  memcpy(&bitmask, &tx_rates.bit_mask, sizeof(sl_wfx_rate_set_bitmask_t));
+
+  printf("bit_mask.b1Mbps = 0x%X\r\n", bitmask.b1Mbps);
+  printf("bit_mask.b2Mbps = 0x%X\r\n", bitmask.b2Mbps);
+  printf("bit_mask.b5P5Mbps = 0x%X\r\n", bitmask.b5P5Mbps);
+  printf("bit_mask.b11Mbps = 0x%X\r\n", bitmask.b11Mbps);
+
+  printf("bit_mask.g6Mbps = 0x%X\r\n", bitmask.g6Mbps);
+  printf("bit_mask.g9Mbps = 0x%X\r\n", bitmask.g9Mbps);
+  printf("bit_mask.g12Mbps = 0x%X\r\n", bitmask.g12Mbps);
+  printf("bit_mask.g18Mbps = 0x%X\r\n", bitmask.g18Mbps);
+  printf("bit_mask.g24Mbps = 0x%X\r\n", bitmask.g24Mbps);
+  printf("bit_mask.g36Mbps = 0x%X\r\n", bitmask.g36Mbps);
+  printf("bit_mask.g48Mbps = 0x%X\r\n", bitmask.g48Mbps);
+  printf("bit_mask.g54Mbps = 0x%X\r\n", bitmask.g54Mbps);
+
+  printf("bit_mask.mcs0 = 0x%X\r\n", bitmask.mcs0);
+  printf("bit_mask.mcs1 = 0x%X\r\n", bitmask.mcs1);
+  printf("bit_mask.mcs2 = 0x%X\r\n", bitmask.mcs2);
+  printf("bit_mask.mcs3 = 0x%X\r\n", bitmask.mcs3);
+  printf("bit_mask.mcs4 = 0x%X\r\n", bitmask.mcs4);
+  printf("bit_mask.mcs5 = 0x%X\r\n", bitmask.mcs5);
+  printf("bit_mask.mcs6 = 0x%X\r\n", bitmask.mcs6);
+  printf("bit_mask.mcs7 = 0x%X\r\n", bitmask.mcs7);
+
+  status = sl_wfx_set_tx_rate_parameters(bitmask, rate_algo, intf ? 
+                                                              SL_WFX_SOFTAP_INTERFACE :
+                                                              SL_WFX_STA_INTERFACE);  
+  
+  if (SL_STATUS_OK == status) {
+    printf("rate_algo set to %s for %s interface\r\n", rate_algo ? "Minstrel": "AARF",
+                                                      intf ? "softap" : "station");
+    return;
+  }
+
+error:  
+  printf("Invalid command\r\n");
+  printf("set tx_params command takes 3 arguments: \r\n"
+        "(1) 0/1 for AARF/Minstrel rate algo; \r\n"
+        "(2) 0x--- a hex number - representing a bitmap to enable rate: "
+        "e.g. 0x2 for b2Mbps- see conversion table in sl_wfx_rate_set_bitmask_t\r\n"
+        "(3) 0/1 for STA/SoftAP\r\n");  
 }

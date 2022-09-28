@@ -351,6 +351,21 @@ static const sl_cli_command_info_t cli_cmd_set_mac_key = \
                   "wifi.mac_key" SL_CLI_UNIT_SEPARATOR,
                   {SL_CLI_ARG_STRING, SL_CLI_ARG_END, });
 
+static const sl_cli_command_info_t cli_cmd_set_rate_algo = \
+    SL_CLI_COMMAND(wifi_set_rate_algo,
+                   "Configure the rate algorithm to use",
+                   "rate-algo <algorithm> <interface>\r\n"
+                   "algorithm: 0(AARF), 1(minstrel); " 
+                   "interface: 0(sta), 1(softap)" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_UINT8, SL_CLI_ARG_UINT8, SL_CLI_ARG_END, });
+
+static const sl_cli_command_info_t cli_cmd_set_tx_params = \
+    SL_CLI_COMMAND(wifi_set_tx_params,
+                   "Set the tx parameters\r\n",
+                   "algorithm: (0: AARF, 1: Minstrel); "
+                   "rate (hex bitmap-n:1byte g:1byte b:1byte); "
+                   "interface(0/1-station/softap)" SL_CLI_UNIT_SEPARATOR,
+                   {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
 /**************************************************************************//**
  * @brief: Grouping all set commands
  *****************************************************************************/
@@ -373,6 +388,8 @@ static const sl_cli_command_entry_t cmd_set_grp_table[] = {
     {"softap.mac", &cli_cmd_set_softap_mac, false},
     {"softap.dhcp_server_state", &cli_cmd_set_softap_dhcp_server_state, false},
     {"wifi.mac_key", &cli_cmd_set_mac_key, false},
+    {"rate-algo", &cli_cmd_set_rate_algo, false},
+    {"tx_params", &cli_cmd_set_tx_params, false},
     {NULL, NULL, false}
 };
 
@@ -508,12 +525,6 @@ static const sl_cli_command_info_t cli_cmd_wifi_slk_bitmap = \
                    "slk_bitmap <msg_id>" SL_CLI_UNIT_SEPARATOR,
                    {SL_CLI_ARG_WILDCARD, SL_CLI_ARG_END, });
 
-static const sl_cli_command_info_t cli_cmd_wifi_wlan_rate_algo = \
-    SL_CLI_COMMAND(wifi_wlan_rate_algo,
-                   "Configure the rate algorithm to use"
-                   "rate-algo <state>",
-                   "state: 0(AARF), 1(minstrel)" SL_CLI_UNIT_SEPARATOR,
-                   {SL_CLI_ARG_UINT8, SL_CLI_ARG_END, });
 /**************************************************************************//**
  * @brief: Grouping all wifi commands
  ******************************************************************************/
@@ -535,8 +546,7 @@ static const sl_cli_command_entry_t wifi_cli_cmds_table[] = {
     {"slk_add", &cli_cmd_wifi_slk_add, false},
     {"slk_remove", &cli_cmd_wifi_slk_remove, false},
     {"slk_bitmap", &cli_cmd_wifi_slk_bitmap, false},
-    {"save", &cli_cmd_wifi_save, false},
-    {"rate-algo", &cli_cmd_wifi_wlan_rate_algo, false},
+    {"save", &cli_cmd_wifi_save, false},    
     {NULL, NULL, false}
 };
 

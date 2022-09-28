@@ -158,9 +158,10 @@ void wifi_slk_bitmap(sl_cli_command_arg_t *args);
 
 
 /*******************************************************************************
- *************   WI-FI CLI's WLAN RATE ALGORITHM COMMANDS PROTOTYPES   ********
+ ************* WI-FI CLI's WLAN TX RATE ALGORITHM COMMANDS PROTOTYPES   ********
  ******************************************************************************/
-void wifi_wlan_rate_algo(sl_cli_command_arg_t *args);
+void wifi_set_rate_algo(sl_cli_command_arg_t *args);
+void wifi_set_tx_params(sl_cli_command_arg_t *args);
 
 #ifdef __cplusplus
 }
