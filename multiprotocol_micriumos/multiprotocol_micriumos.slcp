@@ -21,6 +21,8 @@ component:
   - id: mpu    
   - id: simple_led
     instance: [led0, led1]
+  - id: iostream_eusart
+    instance: [vcom]
   - id: dmadrv
   - id: sleeptimer
   - id: simple_timer_micriumos
@@ -38,6 +40,7 @@ component:
   - id: lwip_api
   - id: lwip_netif_ethernet
   - id: lwip_app_http
+  - id: lwip_app_lwiperf
 
 provides:
   - name: device_init_dcdc
@@ -50,44 +53,19 @@ requires:
   - name: rail_util_pti
     unless: [brd4180a]
   - name: app_log    
-    unless: 
-      - brd4187a
-      - brd4187b
-      - brd4187c
+    unless:       
       - brd4180a
   - name: app_assert
     unless:
-      - brd4187a
-      - brd4187b
-      - brd4187c
-      - brd4180a
-  - name: iostream_recommended_stream
-    unless: 
-      - brd4187a
-      - brd4187b
-      - brd4187c
+      - brd4180a  
   - name: iostream_stdlib_config
-    unless: 
-      - brd4187a
-      - brd4187b
-      - brd4187c
+    unless:       
       - brd4180a
-  - name: iostream_retarget_stdio
-    unless: 
-      - brd4187a
-      - brd4187b
-      - brd4187c
   - name: demo_ui
-    unless: 
-      - brd4187a
-      - brd4187b
-      - brd4187c
+    unless:       
       - brd4180a
   - name: dmd_memlcd
-    unless: 
-      - brd4187a
-      - brd4187b
-      - brd4187c
+    unless:       
       - brd4180a  
 source:
   - path: main.c
@@ -154,6 +132,16 @@ config_file:
       file_id: gatt_configuration_file_id
     path: bluetooth/gatt_configuration.btconf
     directory: btconf
+  - override:
+      component: "wfx_bus_spi"
+      file_id: "sl_wfx_host_bus_pinout"
+    path: "patches/config_files/sl_wfx_host_bus_pinout.h"
+  - override:
+      component: "iostream_eusart"
+      file_id: "iostream_eusart_config"
+      instance: vcom
+    path: "patches/config_files/sl_iostream_eusart_vcom_config.h"
+    
 
 other_file:
   - path: bluetooth/create_bl_files.bat
