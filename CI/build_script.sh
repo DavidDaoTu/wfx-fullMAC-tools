@@ -12,8 +12,12 @@ echo "GIT_COMMIT = $GIT_COMMIT"
 PROJECT_BRANCH=${GIT_BRANCH//'/'/'_'}
 COMMIT_ID=${GIT_COMMIT:0:8}
 
+# GLOBAL VARIABLES #
+IS_PATCHED=0
+
+
 ##### HELPER FUNCTIONS
-# Check this board is supported by this project.
+# is_supported() function checks this board is supported by this project.
 # Params: arg1: board_id; arg2: project_name
 # Return: 0 if supported; otherwise false 
 
@@ -25,7 +29,7 @@ is_supported() {
     case "$project_name" in
 
     'wifi_cli_micriumos')
-        # wifi_cli does not support xG24/xG21
+        # wifi_cli project does not support xG24/xG21
         if [[ "$board_id" == 'brd4187a' ]]  || [[ "$board_id" == 'brd4180a' ]]
         then
             echo "$board_id is not supported by $project_name!"      
@@ -34,7 +38,7 @@ is_supported() {
         ;;
 
     'secured_mqtt')
-        # secured_mqtt does not support xG24/xG21
+        # secured_mqtt project does not support xG24/xG21
         if [[ "$board_id" == 'brd4187a' ]]  || [[ "$board_id" == 'brd4180a' ]]
         then
             echo "$board_id is not supported by $project_name!"      
@@ -43,7 +47,7 @@ is_supported() {
         ;;
 
     'ethernet_bridge')
-        # ethernet_bridge only support WGM160P
+        # ethernet_bridge project only support WGM160P
         if [ "$board_id" != 'brd4321a_a06' ]
         then
             echo "$board_id is not supported by $project_name!"      
@@ -52,12 +56,14 @@ is_supported() {
         ;;
 
     'multiprotocol_micriumos')
-        # multiprotocol only support xG12/xG21/xG24
-        if [[ "$board_id" == 'brd4321a_a06' ]]  || [[ "$board_id" == 'brd2204a' ]] || [[ "$board_id" == 'brd2204c' ]]
+        # multiprotocol project only support xG12/xG21/xG24
+        if [[ "$board_id" == 'brd4321a_a06' ]]  || \
+            [[ "$board_id" == 'brd2204a' ]] || \
+            [[ "$board_id" == 'brd2204c' ]]
         then
             echo "$board_id is not supported by $project_name!"      
             return 1 #false
-        fi 
+        fi        
         ;;    
 
     *)
@@ -67,6 +73,65 @@ is_supported() {
     esac
     return 0 #true
 }
+
+# git_apply_reverse_patch() function apply or reverse the application patch.
+#   For applying patch, called this function before project generation.
+#   For reverse patch, called after building the project
+# Arguments:
+#   + arg1: apply_or_reverse (1: apply; 0: reverse)
+#   + arg2: board_id
+#   + arg3: project_name
+git_apply_reverse_patch() {
+    
+    local apply_or_reverse=$1
+    local board_id=$2
+    local project_name=$3
+
+    if [[ $project_name =~ .*"$PATCH_APPs".* ]] && \
+        [[ $board_id =~ .*"$PATCH_BOARDs".* ]] && \
+        [[ $apply_or_reverse -eq 1 ]]
+    then
+        # Apply "application" patch to the source project if brd4187a/b/c
+        
+        echo "Going into $project_name ...."
+        cd ./$project_name
+        echo "git apply --check ./patches/$PATCH_BOARDs/app.patch"
+        git apply --check ./patches/$PATCH_BOARDs/app.patch
+        echo "git apply ./patches/brd4187/app.patch"
+        git apply ./patches/$PATCH_BOARDs/app.patch
+        cd ../
+        IS_PATCHED=1 #patched
+    else 
+        echo "Going into $project_name ...."
+        cd ./$project_name
+        echo "git apply -R ./patches/$PATCH_BOARDs/app.patch"
+        git apply -R ./patches/$PATCH_BOARDs/app.patch
+        cd ../
+        IS_PATCHED=0 #not_patched
+    fi
+}
+
+# override_config_files() replaces the default header files in config folder by
+# our prepared files
+# Arguments:
+#   + arg1: board_id
+#   + arg2: project_name
+override_config_files() {
+    local board_id=$1
+    local project_name=$2
+
+    if [[ $project_name =~ .*"$PATCH_APPs".* ]] && \
+        [[ $board_id =~ .*"$PATCH_BOARDs".* ]]
+    then
+        echo "Copying files in $project/patches/brd4187/config to out_$project/$BRD_PRJ_NAME/config"
+        ls -l $project/patches/$PATCH_BOARDs/config/*
+        cp -r $project/patches/$PATCH_BOARDs/config/* out_$project/$BRD_PRJ_NAME/config
+        echo "Check contents of overriden config files"
+        cat out_$project/$BRD_PRJ_NAME/config/sl_iostream_eusart_vcom_config.h
+        cat out_$project/$BRD_PRJ_NAME/config/sl_wfx_host_bus_pinout.h
+    fi
+}
+
 
 ##### CLONE OR PULL THE LATEST GSDK FROM GITHUB #####
 if [ ! -d gecko_sdk ]
@@ -161,10 +226,14 @@ do
             continue
         fi
 
+        # Check & apply git patch file. Calling this before project generation
+        git_apply_reverse_patch 1 $board_id $project
+
+        # Creating a output folder containing generated project
         BRD_PRJ_NAME=${board_id}_${project}
         mkdir ./out_$project/$BRD_PRJ_NAME
 
-        # Generating the projects
+        # Generating the projects by slcp tool
         echo "Generating a new out_$project/$BRD_PRJ_NAME"
         slc generate --generator-timeout=180 ./$project/$project.slcp \
                     -np -d out_$project/$BRD_PRJ_NAME \
@@ -173,8 +242,15 @@ do
             echo "Failed to generate $BRD_PRJ_NAME! Exiting.."
             exit 1
         fi
-        
-        # Building the projects
+
+        # Copy the config_files to override the default config files. Called this
+        # function after project generation & the project is patched
+        if [ $IS_PATCHED -eq 1 ]
+        then   
+            override_config_files $board_id $project_name
+        fi
+
+        # Going to generated project & Build the project
         echo "Going to the out_$project/$BRD_PRJ_NAME & building"
         cd ./out_$project/$BRD_PRJ_NAME
         echo "===================> Begin <===================="
@@ -190,6 +266,12 @@ do
         fi    
         echo "===================> Finished <=================="
         cd ../../
+
+        # Reverse git apply patch.
+        if [ $IS_PATCHED -eq 1 ]
+        then   
+            git_apply_reverse_patch 0 $board_id $project
+        fi
     done
 done
 

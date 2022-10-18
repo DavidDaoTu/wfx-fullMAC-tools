@@ -6,7 +6,9 @@ pipeline {
         AGENT_WORKSPACE = '/home/root'
         PROJECTS_NAME = 'multiprotocol_micriumos,secured_mqtt,wifi_cli_micriumos,ethernet_bridge'
         //PROJECTS_NAME = 'multiprotocol_micriumos'
-        BOARD_IDs = 'brd4321a_a06,brd2204a,brd2204c,brd4161a,brd4162a,brd4163a,brd4164a,brd4187a,brd4180a'   
+        BOARD_IDs = 'brd4321a_a06,brd2204a,brd2204c,brd4161a,brd4162a,brd4163a,brd4164a,brd4187a,brd4180a'
+        PATCH_BOARDs = 'brd4187'
+        PATCH_APPs = 'multiprotocol_micriumos'
     }
 
     agent {

@@ -65,7 +65,7 @@
 // <eusartHwFlowControlCtsAndRts=> CTS/RTS
 // <uartFlowControlSoftware=> Software Flow control (XON/XOFF)
 // <i> Default: eusartHwFlowControlNone
-#define SL_IOSTREAM_EUSART_VCOM_FLOW_CONTROL_TYPE     eusartHwFlowControlCtsAndRts
+#define SL_IOSTREAM_EUSART_VCOM_FLOW_CONTROL_TYPE     eusartHwFlowControlNone
 
 // <o SL_IOSTREAM_EUSART_VCOM_RX_BUFFER_SIZE> Receive buffer size
 // <i> Default: 32

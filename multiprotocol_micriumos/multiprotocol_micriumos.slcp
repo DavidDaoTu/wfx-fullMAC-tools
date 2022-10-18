@@ -131,21 +131,11 @@ config_file:
       component: gatt_configuration
       file_id: gatt_configuration_file_id
     path: bluetooth/gatt_configuration.btconf
-    directory: btconf
-  - override:
-      component: "wfx_bus_spi"
-      file_id: "sl_wfx_host_bus_pinout"
-    path: "patches/config_files/sl_wfx_host_bus_pinout.h"
-  - override:
-      component: "iostream_eusart"
-      file_id: "iostream_eusart_config"
-      instance: vcom
-    path: "patches/config_files/sl_iostream_eusart_vcom_config.h"
-    
+    directory: btconf  
 
 other_file:
   - path: bluetooth/create_bl_files.bat
-  - path: bluetooth/create_bl_files.sh  
+  - path: bluetooth/create_bl_files.sh
 
 configuration:
   - name: SL_STACK_SIZE
