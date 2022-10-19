@@ -179,6 +179,7 @@ configuration:
     condition: [dmd_memlcd]
 define:
   - name: DEBUG_EFM
+  - name: IPERF_SERVER
 tag:
   - hardware:rf:band:2400
   - hardware:component:led:2+

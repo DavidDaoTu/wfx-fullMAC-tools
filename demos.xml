@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<demos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:model="http://www.silabs.com/ss/Studio.ecore" xsi:noNamespaceSchemaLocation="http://www.silabs.com/ss/Demo.ecore">
+  <demo name="BRD4187A.demo.multiprotocol_micriumos" label="Demo example: multiprotocol_micriumos">
+    <model:description>
+        This example provides a MicriumOS-based DEMO example using multiple protocols (Wi-Fi + BLE) to do something as simple as toggling LEDs.
+    </model:description>
+    <property key="demos.blurb" value="Demo example - multiprotocol_micriumos"/>
+    <property key="core.partCompatibility" value=".*EFR32MG24A020F1536GM48.*"/>
+    <property key="core.boardCompatibility" value="BRD4187A"/>
+    <property key="demos.imageFile" value="multiprotocol_micriumos/Demos/wisun_soc_cli-brd4187a.s37"/>
+    <property key="core.readmeFiles" value="multiprotocol_micriumos/README.md"/>
+    <property key="filters" value="Device\ Type|SoC Project\ Difficulty|Advanced Wireless\ Technology|Wi-Fi"/>
+    <property key="core.quality" value="PRODUCTION"/>
+  </demo>  
+</demos>
