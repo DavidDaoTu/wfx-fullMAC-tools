@@ -51,7 +51,18 @@
 #include "app_bluetooth.h"
 
 #ifdef IPERF_SERVER
-#include "lwip/apps/lwiperf.h"
+//#include "lwip/apps/lwiperf.h"
+#include "lwiperf.h"
+
+/// Private variables for iperf
+static void *iperf_server_session = NULL;
+static void *iperf_client_session = NULL;
+static bool iperf_client_is_foreground_mode = false;
+
+static uint32_t last_client_bytes_transferred = 0;
+static uint32_t last_client_ms_duration = 0;
+static uint32_t last_client_bandwidth_kbitpsec = 0;
+
 #endif
 
 OS_SEM         scan_sem;
@@ -817,26 +828,102 @@ static sl_status_t url_decode(char* str)
 
 #ifdef IPERF_SERVER
 /***************************************************************************//**
- * @brief Function to handle iperf results report
+ * @brief
+ *    This common function invokes the registered set function
+ *
+ * @param[in]
+ *
+ * @param[out] None
+ *
+ * @return  None
  ******************************************************************************/
-static void iperf_results(void* arg, enum lwiperf_report_type report_type,
-    const ip_addr_t* local_addr, u16_t local_port, const ip_addr_t* remote_addr, u16_t remote_port,
-    u32_t bytes_transferred, u32_t ms_duration, u32_t bandwidth_kbitpsec)
+static void lwip_iperf_results (void *arg,
+                                enum lwiperf_report_type report_type,
+                                const ip_addr_t* local_addr,
+                                uint16_t local_port,
+                                const ip_addr_t* remote_addr,
+                                uint16_t remote_port,
+                                uint32_t bytes_transferred,
+                                uint32_t ms_duration,
+                                uint32_t bandwidth_kbitpsec)
 {
-    (void)arg;
-    (void)report_type;
-    (void)local_addr;
-    (void)local_port;
-    (void)remote_addr;
-    (void)remote_port;
+  (void)arg;
+  (void)report_type;
+  (void)local_addr;
+  (void)local_port;
+  (void)remote_addr;
+  (void)remote_port;
 
-    printf("\r\nIperf Server Report:\r\n");
-    printf("Interval %d.%d sec\r\n", (int)(ms_duration / 1000), (int)(ms_duration % 1000));
-    printf("Bytes transferred %d.%dMBytes\r\n", (int)(bytes_transferred / 1024 / 1024), (int)((((bytes_transferred / 1024) * 1000) / 1024) % 1000));
-    printf("Bandwidth %d.%d Mbits/sec\r\n\r\n", (int)(bandwidth_kbitpsec / 1024), (int)(((bandwidth_kbitpsec * 1000) / 1024) % 1000));
+  printf("\r\nIperf Server Report:\r\n");
+  printf("Interval %d.%ds\r\n",
+        (int)(ms_duration/1000),
+        (int)(ms_duration%1000));
+  printf("Bytes transferred %d.%dM\r\n",
+        (int)(bytes_transferred/1024/1024),
+        (int)((((bytes_transferred/1024)*1000)/1024)%1000));
+  printf("Bandwidth %d.%d Mbps\r\n\r\n",
+        (int)(bandwidth_kbitpsec/1024),
+        (int)(((bandwidth_kbitpsec*1000)/1024)%1000));
 }
 
-#endif
+/***************************************************************************//**
+ * @brief
+ *    Start iperf as server mode.
+ *
+ * @param[in]
+ *
+ * @param[out] None
+ *
+ * @return  None
+ ******************************************************************************/
+void iperf_server(void)
+{
+  if (iperf_server_session != NULL) {
+    /* An iPerf server is already running, kill it first */
+    printf("A server is running, stop it first\r\n");
+  } else {
+    /* Reset session values */
+    last_client_bytes_transferred = 0;
+    last_client_ms_duration = 0;
+    last_client_bandwidth_kbitpsec = 0;
+
+    LOCK_TCPIP_CORE();
+    iperf_server_session = lwiperf_start_tcp_server_default(lwip_iperf_results,
+                                                            (void *)IPERF_SERVER);
+    UNLOCK_TCPIP_CORE();
+
+    if (iperf_server_session != NULL) {
+      printf("iPerf TCP server listening on the TCP port 5001\r\n");
+    } else {
+      printf("iPerf TCP server error\r\n");
+    }
+  }
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Stop iperf server mode
+ *
+ * @param[in]
+ *
+ * @param[out] None
+ *
+ * @return  None
+ ******************************************************************************/
+void stop_iperf_server(void)
+{
+  if (iperf_server_session != NULL) {
+      printf("Stop server\r\n");
+
+      LOCK_TCPIP_CORE();
+      lwiperf_abort(iperf_server_session);
+      UNLOCK_TCPIP_CORE();
+
+      iperf_server_session = NULL;
+    }
+}
+
+#endif /* IPERF_SERVER */
 
 /***************************************************************************//**
  * Start tasks related to the Webpage management.
@@ -862,7 +949,8 @@ static void webpage_start_task(void* p_arg)
     cgi_ssi_init();
 #endif
 #ifdef IPERF_SERVER
-    lwiperf_start_tcp_server_default(iperf_results, 0);
+    //lwiperf_start_tcp_server_default(iperf_results, 0);
+    iperf_server();
 #endif
 
     if (use_dhcp_client) {

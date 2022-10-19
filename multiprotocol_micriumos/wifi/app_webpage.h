@@ -101,11 +101,25 @@ void enable_dhcp_client(void);
  *****************************************************************************/
 void disable_dhcp_client(void);
 
+/**************************************************************************//**
+ * @brief: Start iperf server mode.
+ *****************************************************************************/
+void iperf_server(void);
+
+/**************************************************************************//**
+ * @brief: Stop iperf server mode.
+ *****************************************************************************/
+void stop_iperf_server(void);
+
 #ifdef __cplusplus
 }
 #endif
 
-//#define IPERF_SERVER                                              ///< If defined, iperf server is enabled
+// iPerf server
+#define IPERF_SERVER                        1                     ///< If defined, iperf server is enabled
+#define IPERF_DEFAULT_DURATION_SEC          10
+#define IPERF_DEFAULT_PORT                  5001
+
 #define HTTP_SERVER                                               ///< If defined, http server is enabled
 
 #define WLAN_SSID_DEFAULT       "AP_name"                         ///< wifi ssid for client mode

@@ -107,6 +107,8 @@ source:
     folder: lwip_host/apps
   - path: lwip_host/apps/dhcp_server.c
     folder: lwip_host/apps
+  - path: lwip_host/lwiperf/lwiperf.c
+    folder: lwip_host/lwiperf
   - path: LCD/mp-ui.c
     folder: LCD
     unless: [brd4180a]
@@ -147,6 +149,10 @@ include:
     file_list:
       - path: httpfsdata.h
         folder: lwip_host/webpage
+  - path: lwip_host/lwiperf
+    file_list:
+      - path: lwiperf.h
+        folder: lwip_host/lwiperf
 
 config_file:
   - override:
