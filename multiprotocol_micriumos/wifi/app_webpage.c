@@ -862,6 +862,7 @@ static void webpage_start_task(void* p_arg)
     cgi_ssi_init();
 #endif
 #ifdef IPERF_SERVER
+    printf("TCP server listening on the TCP port 5001\n");
     lwiperf_start_tcp_server_default(iperf_results, 0);
 #endif
 

@@ -38,6 +38,7 @@ component:
   - id: lwip_api
   - id: lwip_netif_ethernet
   - id: lwip_app_http
+  - id: lwip_app_lwiperf
 
 provides:
   - name: device_init_dcdc

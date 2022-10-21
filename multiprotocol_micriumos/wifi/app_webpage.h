@@ -105,7 +105,7 @@ void disable_dhcp_client(void);
 }
 #endif
 
-//#define IPERF_SERVER                                              ///< If defined, iperf server is enabled
+#define IPERF_SERVER                                              ///< If defined, iperf server is enabled
 #define HTTP_SERVER                                               ///< If defined, http server is enabled
 
 #define WLAN_SSID_DEFAULT       "AP_name"                         ///< wifi ssid for client mode
