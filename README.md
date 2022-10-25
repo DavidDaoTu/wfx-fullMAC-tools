@@ -52,5 +52,8 @@ This repository contains applications using the FMAC driver.
   * [*wifi_cli*](./wifi_cli_micriumos/README.md): An application providing a UART command line interface to interact with the Wi-Fi FMAC driver, LwIP APIs and NVM3 APIs.
 
   * [*secured_mqtt*](./secured_mqtt/README.md): An application providing a UART command line interface to establish MQTT over TLS connection using Micrium OS, LwIP (MQTT, DHCP, DNS clients), Mbed TLS and NVM3.
+
   * [*ethernet_bridge*](./ethernet_bridge/README.md): An application providing a network Bridge feature that allows data streaming between Ethernet and Softap interfaces.
+
+  * [*multiprotocol_micriumos*](./multiprotocol_micriumos/README.md): An application providing a real-time Micrium OS-based example simultaneously using multiple protocols (Wi-Fi + BLE) to do something as simple as toggling LEDs through Webpage & EFR Connect BLE Mobile App.
     

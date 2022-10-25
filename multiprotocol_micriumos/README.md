@@ -34,11 +34,29 @@ Additionally, this example requires:
 
 Simplicity Studio 5 is a free software suite needed to start developing your application. To install Simplicity Studio 5, please follow this [**procedure**](https://docs.silabs.com/simplicity-studio-5-users-guide/latest/ss-5-users-guide-getting-started/install-ss-5-and-software) by selecting the options **[Install by connecting device(s)]** and **[Auto]**.
 
+For EFR32xG21, EFR32xG24 boards, a driver patch is required because our updated fullMAC driver will be only released at the end of 2022. The patch can be found [**here**](patches/driver.patch). To apply the patch, simply put the driver.patch file in the gecko_sdk or wfx-fmac-driver (version 3.5.0) folder and go to that folder then run:
+```
+git apply --ignore-whitespace driver.patch
+```
+or 
+```
+git apply --whitespace=fix driver.patch
+``` 
+
+After testing, users can reverse the applied driver patch in gecko_sdk to the default state by:
+```
+git apply --ignore-whitespace -R driver.patch
+```
+or 
+```
+git apply --whitespace=fix -R driver.patch
+```
+
 ## Set Up your Kit
-> **Note**: For EFR32xG24, we support both plug-and-play mode and flying-wires mode. In the plug-and-play mode, LCD and VCOM are disabled by default. In flying-wires mode, all features (VCOM & LCD) are available.
+> **Note**: For EFR32xG24 boards, we support both plug-and-play (default) and flying-wires connection modes. In the plug-and-play default mode, LCD and VCOM components are unavailable. In flying-wires connection mode, users must install & manually change configurations in order to enable all features (VCOM & LCD) of the multiprotocol application.
 
 Please follow the instructions related to the platform suiting your case:
-* [**EFR32xG24 Wireless Gecko Pro Kit setup**](resources/efr32xg24-wfx-setup.md) (For plug-and-play mode, user can skip this setup guidelines)
+* [**EFR32xG24 Wireless Gecko Pro Kit setup**](resources/efr32xg24-wfx-setup.md) (For plug-and-play default mode, users can skip this setup guidelines)
 * [**EFR32xG21 Wireless Gecko Starter Kit setup**](resources/efr32xg21-wfx-setup.md)
 
 ## Start the Example
