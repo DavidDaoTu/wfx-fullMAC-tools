@@ -16,7 +16,7 @@
  *
  * The template implementation below assumes that the application
  * provides the function "MyLowLevelPutchar".  It should return the
- * character written, or -1 on failure.
+ * character written.
  *
  ********************/
 
@@ -27,7 +27,7 @@
 
 extern UART_HandleTypeDef huart3;
 
-int MyLowLevelPutchar(int x);
+HAL_StatusTypeDef MyLowLevelPutchar(const unsigned char* pchar);
 
 /*
  * If the __write implementation uses internal buffering, uncomment
@@ -59,14 +59,13 @@ size_t __write(int handle, const unsigned char * buffer, size_t size)
     return _LLIO_ERROR;
   }
 
-  //MX_USART3_UART_Init();
-
   for (; nChars < size; nChars++)
   {
-    if (HAL_UART_Transmit(&huart3, (uint8_t*)buffer++, sizeof((*buffer++)), 100) < 0)
+    if (MyLowLevelPutchar(buffer) == HAL_ERROR)
     {
       return _LLIO_ERROR;
     }
+    buffer++;
   }
 
   return nChars;
@@ -77,5 +76,11 @@ size_t __write(int handle, const unsigned char * buffer, size_t size)
   return _LLIO_ERROR;
 
 #endif
+}
 
+HAL_StatusTypeDef MyLowLevelPutchar(const unsigned char* pchar)
+{
+  HAL_StatusTypeDef retval = HAL_UART_Transmit(&huart3, (uint8_t*)pchar, sizeof(*pchar), 1000);
+
+  return retval;
 }
